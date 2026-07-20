@@ -58,6 +58,10 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // 复刻原 webpack devServer 代理:/api 转发到后端,规避开发期跨域
         '/api': { target: BACKEND, changeOrigin: true, secure: false },
+        // 图片:后端 /static/image 是完整超集(含本地缺失的游戏商 logo 等),
+        // dev 下代理过去,让本地也能看到全套图。生产同域部署时此代理无关紧要。
+        // 注意:只代理 /static/image;/static/style、/static/js 后端没有,保持走本地。
+        '/static/image': { target: BACKEND, changeOrigin: true, secure: false },
       },
     },
 
