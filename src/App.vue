@@ -369,6 +369,9 @@ export default {
   left: 0;
   width: 100%;
   z-index: 200;
+  /* 刘海屏/全屏(PWA)安全区:普通浏览器 env()=0,不影响现有布局 */
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
 }
 
 .acts .van-tabs__line {
@@ -383,6 +386,9 @@ export default {
 }
 .van-nav-bar {
   background-color: #ede9e7;
+  /* 刘海屏/全屏(PWA)安全区,等效 vant 的 safe-area-inset-top;普通浏览器 env()=0,不影响现有布局 */
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
 }
 .van-nav-bar__arrow {
   font-size: 24px;

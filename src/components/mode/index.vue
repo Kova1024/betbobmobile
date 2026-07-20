@@ -1,5 +1,5 @@
 <template>
-  <div v-if="bannerList.length > 0">
+  <div v-if="bannerList.length > 0" class="home-safe-top">
     <div id="redPacket" v-if="$store.state.appInfo.redpacket_switch == 1 && hongbashow">
       <i @click="$parent.goNav('/hongbao')" class="grab"></i>
       <img @click="changhongbashow" src="/static/image/hongbaocolse.png" />
@@ -302,6 +302,11 @@ export default {
 </script>
 <style lang="scss" scoped>
 @import '../../../static/css/2d87bbdbffeb4734e5c7.css';
+/* 刘海屏/全屏(PWA)顶部安全区适配:整体下移避开状态栏。普通浏览器 env()=0,不影响现有布局 */
+.home-safe-top {
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+}
 .domainModal_content__1nBgc {
   overflow: auto;
 }
