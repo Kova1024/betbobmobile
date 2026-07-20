@@ -1,0 +1,48 @@
+name: Build & Deploy
+
+# 手动触发:GitHub 仓库 → Actions → 左侧选 "Build & Deploy" → 右上 "Run workflow" 点击运行
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and deploy to server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (vite)
+        run: npm run build
+
+      - name: Deploy dist to server (rsync over SSH)
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}   # 私钥内容(Secret)
+          HOST:    ${{ vars.DEPLOY_HOST }}         # 服务器 IP(Variable)
+          USER:    ${{ vars.DEPLOY_USER }}         # SSH 用户(Variable)
+          TARGET:  ${{ vars.DEPLOY_PATH }}         # 部署目录 / 前端 web 根(Variable)
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # 把 dist/ 的「内容」同步到 TARGET/(注意 dist 后的斜杠)
+          # --delete 会清除 TARGET 里非本次构建的文件,保证 web 根干净、无残留旧 bundle。
+          # ⚠ 请确保 TARGET 是「前端专用」的 web 根目录(勿指向含后端文件的目录)。
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            dist/ "$USER@$HOST:$TARGET/"
+
+          echo "✅ 已部署到 $USER@$HOST:$TARGET"
