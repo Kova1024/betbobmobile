@@ -12,3 +12,6 @@ yarn-error.log*
 *.ntvs*
 *.njsproj
 *.sln
+
+# 迁移时的旧构建备份,不入库
+dist_backup.zip

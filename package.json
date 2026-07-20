@@ -5,22 +5,26 @@
   "author": "jieMao",
   "private": true,
   "scripts": {
-    "dev": "webpack-dev-server --inline --progress --config build/webpack.dev.conf.js",
-    "start": "npm run dev",
-    "build": "node build/build.js"
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host --port 8080",
+    "build:webpack": "node build/build.js"
   },
   "dependencies": {
+    "@vitejs/plugin-vue2": "^2.3.4",
     "amfe-flexible": "^2.2.1",
     "axios": "^0.27.2",
     "element-ui": "^2.15.8",
     "postcss-pxtorem": "^6.0.0",
     "vant": "^2.12.48",
-    "vue": "^2.5.2",
+    "vite": "^5.4.21",
+    "vue": "^2.7.16",
     "vue-router": "^3.0.1",
     "vuex": "^3.0.0"
   },
   "devDependencies": {
-    "autoprefixer": "^7.1.2",
+    "autoprefixer": "^10.5.4",
     "babel-core": "^6.22.1",
     "babel-helper-vue-jsx-merge-props": "^2.0.3",
     "babel-loader": "^7.1.1",
@@ -43,6 +47,7 @@
     "postcss-import": "^11.0.0",
     "postcss-loader": "^2.0.8",
     "postcss-url": "^7.2.1",
+    "puppeteer-core": "^23.11.1",
     "rimraf": "^2.6.0",
     "sass": "^1.50.1",
     "sass-loader": "^7.3.1",
@@ -52,7 +57,7 @@
     "url-loader": "^0.5.8",
     "vue-loader": "^13.3.0",
     "vue-style-loader": "^3.0.1",
-    "vue-template-compiler": "^2.5.2",
+    "vue-template-compiler": "^2.7.16",
     "webpack": "^3.6.0",
     "webpack-bundle-analyzer": "^2.9.0",
     "webpack-dev-server": "^2.9.1",
