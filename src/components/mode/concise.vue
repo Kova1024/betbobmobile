@@ -20,7 +20,6 @@
           </div>
         </div></van-tab
       >
-      <!-- 天美社区源码网 timibbs.net timibbs.com timibbs.vip -->
       <van-tab title="PP电子" name="pp">
         <div class="gameList">
           <div class="gameLis" v-for="(item, index) in ppList" :key="index" @click="$parent.openGamePage(item.catecode, item.gamecode, '')">

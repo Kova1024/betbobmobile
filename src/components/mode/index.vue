@@ -126,7 +126,6 @@
           <span>彩票</span>
         </div>
       </div>
-      <!-- 天美社区源码网 timibbs.net timibbs.com timibbs.vip -->
       <div class="rigts" v-if="gameType == 0">
         <img class="" v-for="(item, index) in $store.state.realbetList" :key="index" @click="$parent.openGamePage(item.platform_name, item.game_code, '')" :src="`/static/image/realbet/${item.platform_name}.png`" alt="" />
       </div>
