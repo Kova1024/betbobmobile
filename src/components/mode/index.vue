@@ -25,7 +25,7 @@
       </div>
       <van-swipe @change="onChange">
         <van-swipe-item v-for="(item, index) in bannerList" :key="index">
-          <img :src="item.src" style="width: 100%" alt="" />
+          <img :src="item.pic" @error="$event.target.style.display = 'none'" style="width: 100%; display: block" alt="" />
         </van-swipe-item>
         <template #indicator>
           <div class="swiper-dots">
@@ -305,6 +305,11 @@ export default {
 .home-safe-top {
   padding-top: constant(safe-area-inset-top);
   padding-top: env(safe-area-inset-top);
+}
+/* 轮播无图/图片加载失败时不塌陷,给悬浮头部(菜单/客服)留出正常高度,避免图标错位 */
+::v-deep .van-swipe {
+  min-height: 2.4rem;
+  background-color: #ede9e7;
 }
 .domainModal_content__1nBgc {
   overflow: auto;
