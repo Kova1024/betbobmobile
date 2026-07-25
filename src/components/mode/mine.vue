@@ -105,9 +105,9 @@
             <span class="tisf">加入我们，共赢财富</span>
             <img class="rigiong" src="/static/style/icoArrowGrey@2x.abc43ab099390c4587d33290a76fc15e.png" alt="" />
           </div>
-          <div class="hgsw" v-if="$store.state.userInfo.isagent == 1" @click="$parent.goNav('/gamePage?dailiD=1')">
+          <div class="hgsw" v-if="$store.state.userInfo.isagent == 1" @click="$parent.goNav('/agent')">
             <img class="firsimg" src="/static/image/join.png" alt="" />
-            <span class="tit">代理登录</span>
+            <span class="tit">代理中心</span>
             <span class="tisf"></span>
             <img class="rigiong" src="/static/style/icoArrowGrey@2x.abc43ab099390c4587d33290a76fc15e.png" alt="" />
           </div>

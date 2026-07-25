@@ -39,6 +39,7 @@ import payInfo from '@/components/payInfo'
 import withdrawal from '@/components/withdrawal'
 import transfer from '@/components/transfer'
 import concise from '@/components/mode/concise'
+import agentCenter from '@/components/agent/AgentCenter'
 
 
 
@@ -131,6 +132,11 @@ export default new Router({
       path: '/login',
       name: 'login',
       component: login,
+    }, {
+      path: '/agent',
+      name: 'agentCenter',
+      component: agentCenter,
+      meta: { requireAuth: true },
     }, {
       path: '/gamePage',
       name: 'gamePage',
