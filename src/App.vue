@@ -46,23 +46,8 @@ export default {
       that.pid = query.pid;
       that.$router.push({ path: `/login?type=1&pid=${query.pid}` });
     }
-    that.getVisitUrl();
   },
   methods: {
-    getVisitUrl() {
-      let that = this;
-      that.$apiFun
-        .get('/api/getVisitUrl', {})
-        .then(res => {
-          if (res.code == 200) {
-            let url = that.pid ? res.data.url + 'register?pid=' + that.pid : res.data.url;
-            window.open(url, '_self');
-          }
-        })
-        .catch(res => {
-          // console.log(res)
-        });
-    },
     // 获取游戏列表
     getGameList() {
       let that = this;

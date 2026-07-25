@@ -6,6 +6,10 @@
           <div class="login_formContainer__2zhUW">
             <div class="login_normalContent__1I3Xg">
               <div class="login_title__1VIs3">登录</div>
+              <div class="login-type-tabs">
+                <div :class="['lt-tab', loginType == 0 ? 'lt-active' : '']" @click="loginType = 0">玩家登录</div>
+                <div :class="['lt-tab', loginType == 1 ? 'lt-active' : '']" @click="loginType = 1">代理登录</div>
+              </div>
               <div class="login_form__1BQh1">
                 <div class="login_normalLoginWrap__Q4P0O">
                   <div class="login_inputBox__3j84z">
@@ -190,6 +194,7 @@ export default {
       imgLis: ['2PYL', '6AQ5', '8PHD', '21I7', '69HM', 'ACWA', 'DUZ7', 'IY98', 'K647', 'M52T', 'NY52', 'NZFA', 'SN76', 'SP4D', 'VAEO', 'YFQM', 'ZZU5', '7GQT', 'LFW3', 'NU2T', 'UAE3'],
       index: 0,
       infoType: 0, //0 是登陆 1是注册
+      loginType: 0, //0 玩家登录 1 代理登录
       psw1: true,
       psw2: true,
       psw3: true,
@@ -308,17 +313,44 @@ export default {
         if (res.code !== 200) {
           that.$parent.showTost(0, res.message);
           that.$parent.hideLoading();
+          return;
         }
-        if (res.code === 200) {
-          sessionStorage.setItem('token', res.data.api_token);
-          that.$store.commit('changToken');
+        sessionStorage.setItem('token', res.data.api_token);
+        that.$store.commit('changToken');
+        that.$parent.openDaoTime();
+        if (that.loginType == 1) {
+          // 代理登录:先确认该账号是代理,再进代理中心
+          that.checkAgentAndEnter();
+        } else {
+          // 玩家登录:原逻辑
           that.$parent.getUserInfo();
-          that.$parent.openDaoTime();
-
           that.$parent.goNav('/');
+          that.$parent.hideLoading();
         }
-        that.$parent.hideLoading();
       });
+    },
+    // 代理登录:校验 isagent,是代理则进代理中心,否则清除登录态并提示
+    checkAgentAndEnter() {
+      let that = this;
+      that.$apiFun
+        .post('/api/user', {})
+        .then(u => {
+          that.$parent.hideLoading();
+          if (u.code === 200 && u.data && u.data.isagent == 1) {
+            that.$parent.getUserInfo(); // 正常写入用户信息到 store
+            that.$parent.goNav('/agent');
+          } else {
+            sessionStorage.removeItem('token');
+            that.$store.commit('changToken');
+            that.$parent.showTost(0, '该账号不是代理，请切换到「玩家登录」');
+          }
+        })
+        .catch(() => {
+          that.$parent.hideLoading();
+          sessionStorage.removeItem('token');
+          that.$store.commit('changToken');
+          that.$parent.showTost(0, '验证代理身份失败，请重试');
+        });
     },
   },
   mounted() {
@@ -351,6 +383,28 @@ export default {
 
 .login_formContainer__2zhUW {
   width: 8.02rem;
+}
+/* 玩家/代理 登录切换 */
+.login-type-tabs {
+  display: flex;
+  width: 240px;
+  margin: 12px auto 18px;
+  border: 1px solid #cf866b;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.lt-tab {
+  flex: 1;
+  text-align: center;
+  height: 34px;
+  line-height: 34px;
+  font-size: 14px;
+  color: #cf866b;
+  cursor: pointer;
+}
+.lt-active {
+  background: #cf866b;
+  color: #fff;
 }
 // .login_formContainer__2zhUW {
 
