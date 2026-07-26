@@ -4,6 +4,22 @@ Go(Gin) 重写版接口文档。对应原 Laravel `api.php`/`api2.php` + 代理�
 
 > 前半部分是**端点索引**（方法/路径/鉴权/参数）；文末附**请求/响应示例**、**数据结构（Schema）**、**错误码**。
 
+## 契约对齐修复(2026-07-26)
+
+以下端点已逐字对齐原 PHP 契约(全部为兼容式修复：新旧字段名都认，返回为原契约的超集)：
+
+- **取参方式**：所有原 `$request->input()` 风格接口现同时接受 **JSON body / query / form**；充提/红包记录支持 `time:[start,end]` 数组。
+- **register/login**：账号字段 `name`(或 `username`)；register 收 `paypassword`(存 paypwd)/`pid`；返回含 `api_token`(=JWT 别名)、login 另含 `isagent`。
+- **/me、/refreshusermoney**：返回原契约计算字段集(`api_token/fanshui/joinday/gameblance/avatar(全URL)/mobile/email/usdtrate/withdrawusdtrate/withdrawcashfee/withdrawfeeusdttrc/current_vip/next_vip/vipname`) + 模型原始列超集；refreshusermoney message='刷新成功'。
+- **/recharge**：订单号同时放 `message` 和 `data.out_trade_no`。**/payinfo**：`message` 为 `bankpay/alipay/wxpay/usdtpay/ebpay`，`data={deposit_no,info(含 paytype、usdt 时含 usdtrate+按汇率换算的 real_money),cardlist(含 ico/payimg 全URL)}`。**/transall**：结果文案在 `message`(data.msg 同值)。**/credit**：data 为金额标量。
+- **/gettransrecord**：实现 `type=1充值/2提现/3转入/4回收` + `date=1..4` + `api_type`，每条附 `pay_way`(中文)/`amount`(绝对值)，created_at 为 `Y-m-d H:i:s`。**/getrechargerecord**(附 `type` 充值/充值赠送)、**/getwithdrawrecord**(附 `out_trade_no`/`type`)支持 time 过滤。
+- **/getcard**：每张卡附 `ico`(全URL)/`bank_not`(尾4位)/`usdtrate`/`withdrawusdtrate`。
+- **/banklist**(附 `ico`)、**/getpaybank**(附 `bank_data`+`ico`)、**/bannerList**(type 缺省 2，项为 `{src(全URL),background,url}`)、**/systembankcardinfo**(按 `payType` 返回单条 pay_setting)、**/app**(site_logo/ios_download_qrcode 全URL)。
+- **/message**=原 messagecenter(按 `type`+用户可见范围过滤，附 `is_read`/`desc`)；**/showmessage** 按 `id` 返回单条。**/noticeList、/activityApplyLog** 补原大小写路由；activityApplyLog 补 `user_id/updated_at`。**/redpacket** 支持 GET + `time` 过滤 + 每条附 `amount`。
+- **/gamelist**(收 `platform_name`/`game_type`，DB 生成聚合器同义条目)、**/gamelistBycode**(fishing 固定形状 `{gamepic,catecode,gamename,gamecode,gametype}`)、**GET /game/list**(收 `platform`/`category`，图片字段全URL)、**/betrecord**(每条附 `Code` 平台中文名，bet_time 为 `Y-m-d H:i:s`)、**/getdogame**(剔除 universal)、**/getfanshui**(支持 `date`，每条附 `gamename`)。
+- **/editPayPassword**：`password` 校验的是旧支付密码(对齐原实现语义)。**/getVisitUrl**：按 UA 判端取 WAP_URL/PC_URL(逗号多值)，Origin 命中时返回 code=500+message wap/pc。
+- 代理自助：profit 支持 `username` 定位；commission 补 `all_valid_betsum`；subordinate 每行补 `usersum/agentsum/yongjinsum`。
+
 ## 通用约定
 
 - **Base URL**：`http://<host>:8080`
@@ -33,15 +49,15 @@ Go(Gin) 重写版接口文档。对应原 Laravel `api.php`/`api2.php` + 代理�
 
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
-| POST | `/api/register` | - | 注册。body: `username,password,realname,phone?` → `{token,user_id}` |
-| POST | `/api/login` | - | 登录。body: `username,password` → `{token,user_id,username}` |
+| POST | `/api/register` | - | 注册。body: `name`(或`username`)`,password,paypassword?,realname?,phone?,pid?` → `{id,user_id,username,realname,vip,token,api_token}`（`api_token`=`token`，字段名对齐原 PHP）|
+| POST | `/api/login` | - | 登录。body: `name`(或`username`)`,password` → `{token,api_token,user_id,username,isagent}` |
 | POST | `/api/login_pc` | - | PC 登录（同 login）|
-| GET | `/api/me` · POST `/api/user` · POST `/api/userblance` | 用户 | 当前用户信息（隐去密码）|
+| GET | `/api/me` · POST `/api/user` · POST `/api/userblance` | 用户 | 用户信息：原契约计算字段集(`api_token,fanshui,joinday,gameblance,avatar(全URL),mobile,email,usdtrate,withdrawusdtrate,withdrawcashfee,withdrawfeeusdttrc,current_vip,next_vip,vipname` 等)+模型原始列超集(隐去密码) |
 | POST | `/api/balance` | 用户 | 余额 `{balance,mbalance}` |
 | GET | `/api/autogetusermoney` | 用户 | 轻量返回余额 |
 | POST | `/api/logoff` | 用户 | 登出（标记离线）|
 | POST | `/api/editPassword` | 用户 | 改登录密码。body: `password(旧),paypassword(新)` |
-| POST | `/api/editPayPassword` | 用户 | 改支付密码。body: `password(登录密码),paypassword(新支付密码)` |
+| POST | `/api/editPayPassword` | 用户 | 改支付密码。body: `password(【旧支付密码】,对齐原语义),paypassword(新支付密码)`；错误码 205 |
 | POST | `/api/updateuserinfo` | 用户 | 改资料。body: `birthday,mobile,email` |
 | POST | `/api/uptransferstatus` | 用户 | 转账模式。body: `transferstatus`（0转账/1免转）|
 | POST | `/api/uploadimg` | 用户 | 上传图片（multipart `file`）→ `{path}` |
@@ -52,40 +68,41 @@ Go(Gin) 重写版接口文档。对应原 Laravel `api.php`/`api2.php` + 代理�
 |---|---|---|---|
 | POST | `/api/bindcard` | 用户 | 绑卡。body: `bank,bank_no,bank_owner,bank_address,pay_pass` |
 | POST | `/api/delcard` | 用户 | 删卡。body: `id` |
-| POST | `/api/getcard` | 用户 | 卡列表。body: `type`（1银行/2USDT/3ebpay/4antoken）|
-| POST | `/api/recharge` | 用户 | 发起充值。body: `amount,paytype(bank/alipay/wxpay/usdt/ebpay),catepay?` → `{out_trade_no}` |
+| POST | `/api/getcard` | 用户 | 卡列表。body: `type`（1银行/2USDT/3ebpay/4antoken）；每张卡附 `ico(全URL),bank_not(尾4位),usdtrate,withdrawusdtrate` |
+| POST | `/api/recharge` | 用户 | 发起充值。body: `amount,paytype(bank/alipay/wxpay/usdt/ebpay),catepay?` → **message=订单号**(原契约)，data 同给 `{out_trade_no}` |
 | POST/GET | `/api/getPayRange` | 用户 | 通道金额范围。`type` → `{min_price,max_price}` |
-| POST | `/api/payinfo` | 用户 | 充值单收款账户。body: `deposit_no` |
+| POST | `/api/payinfo` | 用户 | 充值单收款信息。body: `deposit_no` → **message=`bankpay/alipay/wxpay/usdtpay/ebpay`**(前端据此分流)，data=`{deposit_no,info(含paytype,usdt含usdtrate+换算real_money),cardlist(含ico/payimg全URL)}` |
 | POST | `/api/withdraw` | 用户 | 提现。body: `amount,bank(卡id),password` |
 | POST | `/api/getBetAmount` | 用户 | 距上次提现的有效打码量 |
 | POST | `/api/transfer` | 用户 | 额度转换。body: `sourcetype,targettype,amount`（`userbalance`⇄平台code）|
-| POST | `/api/transall` | 用户 | 一键回收（游戏余额转回）|
-| POST | `/api/getrechargerecord` | 用户 | 充值记录 |
-| POST | `/api/getwithdrawrecord` | 用户 | 提现记录 |
-| POST | `/api/gettransrecord` | 用户 | 转账记录。body: `date(1/2/3/4),page,pagesize` |
+| POST | `/api/transall` | 用户 | 一键回收。**结果文案在 message**('回收成功'/'没有可回收的金额')，data.msg 同值 |
+| POST | `/api/getrechargerecord` | 用户 | 充值记录。body 可带 `time:[start,end],page,pagesize`；每条附 `type`(充值/充值赠送) |
+| POST | `/api/getwithdrawrecord` | 用户 | 提现记录。body 可带 `time:[start,end],page,pagesize`；每条附 `out_trade_no(=order_no),type='提现'` |
+| POST | `/api/gettransrecord` | 用户 | 交易记录。body: `type(1充值/2提现/3转入游戏/4回收),date(1/2/3/4),api_type?,page,pagesize`；每条附 `pay_way(中文),amount(绝对值)`，created_at 为 `Y-m-d H:i:s` |
 | POST | `/api/userapimoney/:api_code` | 用户 | 刷新并返回某平台额度 |
-| ANY | `/api/credit` | - | 平台商户额度。`api_code` → `{money}` |
+| ANY | `/api/credit` | - | 平台商户额度。`api_code` → **data 为金额标量**(原契约透传) |
 
 ## 3. 游戏
 
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
-| POST | `/api/gamelist` · GET `/api/game/list` | - | 游戏列表。body: `category_id?,is_hot?,app?` |
+| POST | `/api/gamelist` | - | APP 游戏列表。body: `platform_name?,game_type?`(兼容旧 `category_id`)；条目 `{gamecode,gamename,name,gametype,category_id,platform_name,app_state,gamepic(全URL)}` |
+| GET | `/api/game/list` | - | 站点游戏列表。query: `platform?,category?`；条目含 `check_yes_img/check_no_img/api_logo_img/mobile_img/header_logo`(全URL) |
 | GET | `/api/all/plat` | - | 启用平台列表 |
-| POST | `/api/gamelistBycode` | - | 按平台查游戏。body: `platform_name` |
-| POST | `/api/getdogame` | - | 平台 code→name 映射 |
+| POST | `/api/gamelistBycode` | - | 捕鱼游戏列表(固定 category=fishing，原契约不读参)。条目 `{gamepic(全URL),catecode,gamename,gamecode,gametype:'fishing'}` |
+| POST | `/api/getdogame` | - | 平台 code→name 映射(剔除 universal，对齐原实现) |
 | POST | `/api/gamelogin` | 用户 | 进游戏。body: `api_code,game_type,is_mobile,game_code` → `{url}` |
 | POST | `/api/getGameUrl` | 用户 | 进游戏（App 字段名 `plat_name/game_type/game_code/is_mobile_url`）|
-| POST | `/api/refreshusermoney` | 用户 | 刷新各平台余额到 usersmoney → `{balance,gameblance,list}` |
+| POST | `/api/refreshusermoney` | 用户 | 刷新各平台余额 → 原契约完整用户字段集(同 /me)+`list`，message='刷新成功' |
 | POST | `/api/app/getMoney` | 用户 | 网站余额 + 游戏总余额 |
-| POST | `/api/betrecord` | 用户 | 投注记录。body: `date,api_type,page,pagesize` |
+| POST | `/api/betrecord` | 用户 | 投注记录。body: `date,api_type,page,pagesize`；每条 `{bet_id,bet_time(Y-m-d H:i:s),platform_type,bet_amount,win_loss,status,Code(平台中文名)}` |
 | POST | `/api/balancelist` · `/api/balancelist2` | 用户 | 各平台额度列表 |
 
 ## 4. 返水 / 返佣
 
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
-| POST | `/api/getfanshui` | 用户 | 返水记录+汇总。body: `api_type,type,page,pagesize` |
+| POST | `/api/getfanshui` | 用户 | 返水记录+汇总。body: `date(1/2/3/4)?,api_type,type,page,pagesize`；每条附 `gamename` |
 | POST | `/api/dofanshui` | 用户 | 领取全部可领返水 |
 
 > 返水/返佣的**产生**由投注回调 `/api/game/callback` 触发（见 §8）；代理返佣发放由 cron `agent-settlement`。
@@ -98,18 +115,20 @@ Go(Gin) 重写版接口文档。对应原 Laravel `api.php`/`api2.php` + 代理�
 | POST | `/api/activitylist` | - | 活动列表。body: `type?` |
 | POST | `/api/activitydeatil` · `/api/activitydetail` | - | 活动详情(后者为正确拼写)。body: `id` |
 | POST | `/api/doactivity` · `/api/doactivityapply` | 用户 | 申请活动。body: `activityid` |
-| POST | `/api/activityapplylog` | 用户 | 活动申请记录 |
+| POST | `/api/activityapplylog`(=`/activityApplyLog`) | 用户 | 活动申请记录(含 `user_id,updated_at,activity_name`) |
 | POST | `/api/uservip` | - | VIP 等级列表 |
 | GET | `/api/userredpacket` | 用户 | 红包状态/可领次数 |
 | POST | `/api/douserredpacket` | 用户 | 抢红包（按今日充值×比例随机）|
 | POST | `/api/getredpacket` | 用户 | 领取已生成红包。body: `id`（>0 指定，≤0 全部）|
-| POST | `/api/redpacket` | 用户 | 红包领取记录 |
+| ANY | `/api/redpacket` | 用户 | 红包领取记录(GET/POST)。body 可带 `time:[start,end]`；每条附 `amount(=redpacketmoney)` |
 | POST | `/api/applyagentdo` | 用户 | 申请成为代理。body: `apply_info,mobile` |
 | POST | `/api/suggestion` | 用户 | 意见反馈。body: `type,content,img?` |
 | POST | `/api/suggestionlist` | 用户 | 反馈记录 |
 | POST | `/api/mail` | 用户 | 站内信列表 |
 | GET | `/api/mail_detail/:id` | 用户 | 站内信详情 |
-| POST | `/api/noticelist` · `/api/message` · `/api/showmessage` | 用户 | 站内消息分页 |
+| POST | `/api/noticelist`(=`/noticeList`) | 用户 | 站内消息分页。body: `page,limit` |
+| POST | `/api/message` | 用户 | 消息中心(原 messagecenter)。body: `type,page,limit`；按用户可见范围过滤，每条附 `is_read,desc(前20字)` |
+| POST | `/api/showmessage` | 用户 | 消息详情(单对象)。body: `id` |
 | POST | `/api/article` | - | 文章。body: `type(cateid)` |
 | ANY | `/api/homenotice` | - | 首页公告标题(3) |
 | POST | `/api/homecontent` · `/api/homenoticelist` · `/api/homenoticedeatil`(=`/homenoticedetail`) | - | 公告内容/列表/详情 |
@@ -120,13 +139,15 @@ Go(Gin) 重写版接口文档。对应原 Laravel `api.php`/`api2.php` + 代理�
 |---|---|---|---|
 | POST | `/api/app` | - | 站点聚合配置（标题/logo/下载/开关等）|
 | POST | `/api/systemstatus` | - | 站点开关 |
-| POST | `/api/banklist` · `/api/systembankcardinfo` | - | 充值银行列表 |
-| POST | `/api/bannerList` | - | 轮播图。body: `type?` |
-| ANY | `/api/getpaybank` | - | 收款账户列表 |
+| POST | `/api/banklist` | - | 充值银行列表，每项附 `ico`(全URL) |
+| POST | `/api/systembankcardinfo` | - | 系统收款账户(单条)。body: `payType`(1=银行卡bank_id=1，否则bank_id>1) |
+| POST | `/api/bannerList` | - | 轮播图。body: `type?`(缺省2)；项为 `{src(全URL),background,url}`，无数据回退内置默认图 |
+| ANY | `/api/getpaybank` | - | 收款账户列表，每项附 `bank_data(所属银行)+ico(全URL)` |
 | GET | `/api/get_pay_way` | - | 各支付方式可用性 |
 | GET/POST | `/api/getAppUrl` · `/api/getApiUrl` | - | 站点地址 |
 | POST | `/api/getservicerurl` | - | 客服地址 |
-| GET | `/api/getAgentLoginUrl` · `/api/getVisitUrl` | - | 代理登录/访问地址 |
+| GET | `/api/getAgentLoginUrl` | - | 代理后台登录地址 |
+| GET | `/api/getVisitUrl` | - | 访问地址：按 UA 判端取 WAP_URL/PC_URL(逗号多值取首个)；Origin 已在列表内→code=500+message wap/pc |
 
 ## 7. 代理自助后台 `/api/agent/*`（需登录且为代理）
 
@@ -434,12 +455,12 @@ Go(Gin) 重写版接口文档。对应原 Laravel `api.php`/`api2.php` + 代理�
 |---|---|---|
 | POST /api/register | `{username,password,realname,phone?}` | `{token,user_id}` |
 | POST /api/login · /api/login_pc | `{username,password}` | `{token,user_id,username}` |
-| GET /api/me · POST /api/user · /api/userblance | - | `Users` 实体 |
+| GET /api/me · POST /api/user · /api/userblance | - | 原契约用户字段集+`Users` 列超集 |
 | POST /api/balance | - | `{balance,mbalance}` |
 | GET /api/autogetusermoney | - | `{balance}` |
 | POST /api/logoff | - | `null` |
 | POST /api/editPassword | `{password,paypassword}` | `null` |
-| POST /api/editPayPassword | `{password,paypassword}` | `null` |
+| POST /api/editPayPassword | `{password(旧支付密码),paypassword}` | `null` |
 | POST /api/updateuserinfo | `{birthday,mobile,email}` | `null` |
 | POST /api/uptransferstatus | `{transferstatus}` | `null` |
 | POST /api/uploadimg | multipart `file` | `{path}` |
@@ -451,15 +472,15 @@ Go(Gin) 重写版接口文档。对应原 Laravel `api.php`/`api2.php` + 代理�
 | POST /api/bindcard | `{bank,bank_no,bank_owner,bank_address,pay_pass}` | `null` |
 | POST /api/delcard | `{id}` | `null` |
 | POST /api/editCard/:id | `{bank?,bank_no?,bank_owner?,bank_address?}` | `null` |
-| POST /api/getcard | `{type}` | `UserCards[]` |
-| POST /api/recharge | `{amount,paytype,catepay?}` | `{out_trade_no}` |
+| POST /api/getcard | `{type}` | `UserCards[]`+每项 `ico/bank_not/usdtrate/withdrawusdtrate` |
+| POST /api/recharge | `{amount,paytype,catepay?}` | `{out_trade_no}`(message=订单号) |
 | ANY /api/getPayRange | `type` | `{min_price,max_price}` |
-| POST /api/payinfo | `{deposit_no}` | `{info:Recharge, cardlist:[…], paytype}` |
+| POST /api/payinfo | `{deposit_no}` | `{deposit_no,info(含paytype),cardlist}`，message=bankpay/alipay/wxpay/usdtpay/ebpay |
 | POST /api/pay/cgpay_create | `{out_trade_no}` | `{gateway:网关JSON(含payUrl)}` |
 | POST /api/withdraw | `{amount,bank,password}` | `null` |
 | POST /api/getBetAmount | - | `{bet_amount}` |
 | POST /api/transfer | `{sourcetype,targettype,amount}` | `{balance}` |
-| POST /api/transall | - | `{msg}` |
+| POST /api/transall | - | `{msg}`(message=同文案) |
 | POST /api/getrechargerecord | `{page?,size?}` | 分页对象(`data:Recharge[]`) |
 | POST /api/getwithdrawrecord | `{page?,size?}` | 分页对象(`data:Withdraws[]`) |
 | POST /api/gettransrecord | `{date?,page?,pagesize?}` | 分页对象(`data:TransferLogs[]`) |

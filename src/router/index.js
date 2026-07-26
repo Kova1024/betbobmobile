@@ -39,14 +39,6 @@ import payInfo from '@/components/payInfo'
 import withdrawal from '@/components/withdrawal'
 import transfer from '@/components/transfer'
 import concise from '@/components/mode/concise'
-import agentCenter from '@/components/agent/AgentCenter'
-import agentCommission from '@/components/agent/Commission'
-import agentProfit from '@/components/agent/Profit'
-import agentDownline from '@/components/agent/Downline'
-import agentAddMember from '@/components/agent/AddMember'
-import agentRecharge from '@/components/agent/AgentRecharge'
-import agentRebateSet from '@/components/agent/RebateSet'
-import agentTeamLogs from '@/components/agent/TeamLogs'
 
 
 
@@ -152,25 +144,6 @@ export default new Router({
       path: '/login',
       name: 'login',
       component: login,
-    }, {
-      path: '/agent',
-      name: 'agentCenter',
-      component: agentCenter,
-      meta: { requireAuth: true },
-    }, {
-      path: '/agent/commission', name: 'agentCommission', component: agentCommission, meta: { requireAuth: true },
-    }, {
-      path: '/agent/profit', name: 'agentProfit', component: agentProfit, meta: { requireAuth: true },
-    }, {
-      path: '/agent/downline', name: 'agentDownline', component: agentDownline, meta: { requireAuth: true },
-    }, {
-      path: '/agent/add-member', name: 'agentAddMember', component: agentAddMember, meta: { requireAuth: true },
-    }, {
-      path: '/agent/recharge', name: 'agentRecharge', component: agentRecharge, meta: { requireAuth: true },
-    }, {
-      path: '/agent/rebate-set', name: 'agentRebateSet', component: agentRebateSet, meta: { requireAuth: true },
-    }, {
-      path: '/agent/logs', name: 'agentTeamLogs', component: agentTeamLogs, meta: { requireAuth: true },
     }, {
       path: '/gamePage',
       name: 'gamePage',

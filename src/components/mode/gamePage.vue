@@ -19,7 +19,12 @@ export default {
   created() {
     let that = this;
     var query = that.$route.query;
+    // 打开代理
     console.log(query)
+    if (query.dailiD == 1) {
+      that.getAgentLoginUrl();
+      return;
+    }
     // 打开客服
     if (query.dailiD == 2) {
       that.getservicerurl();
@@ -38,6 +43,18 @@ export default {
     getservicerurl() {
       let that = this;
       that.$apiFun.post('/api/getservicerurl', {}).then(res => {
+        if (res.code != 200) {
+          that.showTost(0, res.message);
+        }
+        if (res.code == 200) {
+          that.url = res.data.url;
+        }
+      });
+    },
+    // 打开代理
+    getAgentLoginUrl() {
+      let that = this;
+      that.$apiFun.get('/api/getAgentLoginUrl', {}).then(res => {
         if (res.code != 200) {
           that.showTost(0, res.message);
         }

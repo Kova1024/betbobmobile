@@ -69,6 +69,9 @@ export default {
     openKefu() {
       this.$parent.openKefu();
     },
+    getAgentLoginUrl() {
+      this.$parent.getAgentLoginUrl();
+    },
     showTost(type, title) {
       this.$parent.showTost(type, title);
     },
