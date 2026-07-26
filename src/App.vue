@@ -248,9 +248,9 @@ export default {
       that.$apiFun.post('/api/user', {}).then(res => {
         if (res.code === 200) {
           let userInfo = res.data;
-          let str = userInfo.current_vip;
+          let str = userInfo.current_vip || '';
           let index = str.indexOf('P');
-          let vip = str.substr(index + 1, str.length); //04
+          let vip = index >= 0 ? str.substr(index + 1) : ''; //04
           userInfo.vip = vip;
           localStorage.setItem('userInfo', JSON.stringify(userInfo));
           that.userInfo = userInfo;
@@ -265,9 +265,9 @@ export default {
       that.$apiFun.post('/api/user', {}).then(res => {
         if (res.code === 200) {
           let userInfo = res.data;
-          let str = userInfo.current_vip;
+          let str = userInfo.current_vip || '';
           let index = str.indexOf('P');
-          let vip = str.substr(index + 1, str.length); //04
+          let vip = index >= 0 ? str.substr(index + 1) : ''; //04
           userInfo.vip = vip;
           localStorage.setItem('userInfo', JSON.stringify(userInfo));
           that.userInfo = userInfo;
