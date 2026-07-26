@@ -46,8 +46,22 @@ export default {
       that.pid = query.pid;
       that.$router.push({ path: `/login?type=1&pid=${query.pid}` });
     }
+    that.getVisitUrl();
   },
   methods: {
+    // 访问地址跳转:仅当后端确实返回了非空 url 才跳转(url 为空则不跳,避免跳成空白)
+    getVisitUrl() {
+      let that = this;
+      that.$apiFun
+        .get('/api/getVisitUrl', {})
+        .then(res => {
+          if (res.code == 200 && res.data && res.data.url) {
+            let url = that.pid ? res.data.url + 'register?pid=' + that.pid : res.data.url;
+            window.open(url, '_self');
+          }
+        })
+        .catch(() => {});
+    },
     // 获取游戏列表
     getGameList() {
       let that = this;
