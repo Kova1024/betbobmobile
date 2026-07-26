@@ -1,0 +1,95 @@
+/* 代理页通用样式(各页 scoped 内 @import） */
+.ag-page {
+  width: 100%;
+  min-height: 100vh;
+  background: #f3f4f7;
+  padding-bottom: 30px;
+}
+.ag-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #ede9e7;
+  z-index: 20;
+}
+.ag-card {
+  margin: 12px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px;
+}
+.ag-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 12px;
+}
+.ag-empty {
+  text-align: center;
+  padding: 46px 0;
+  color: #bbb;
+  font-size: 13px;
+}
+/* 日期快捷 */
+.ag-presets {
+  display: flex;
+  padding: 12px 12px 0;
+  flex-wrap: wrap;
+}
+.ag-preset {
+  padding: 5px 14px;
+  margin: 0 8px 8px 0;
+  border: 1px solid #ddd;
+  border-radius: 15px;
+  font-size: 12px;
+  color: #666;
+}
+.ag-preset.on {
+  border-color: #cf866b;
+  color: #cf866b;
+  background: #fbeee8;
+}
+/* 列表项 */
+.ag-item {
+  margin: 10px 12px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+.ag-item-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.ag-item-hd .name {
+  font-weight: 700;
+  color: #333;
+}
+.ag-row {
+  display: flex;
+  justify-content: space-between;
+  line-height: 1.9;
+  color: #666;
+}
+.ag-row .k {
+  color: #999;
+}
+.ag-up {
+  color: #e64340;
+}
+.ag-down {
+  color: #07c160;
+}
+/* 表单 */
+.ag-tip {
+  margin: 12px;
+  font-size: 12px;
+  color: #999;
+  line-height: 1.6;
+}
+.ag-submit {
+  margin: 24px 12px 0;
+}

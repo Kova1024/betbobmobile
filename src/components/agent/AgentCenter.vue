@@ -81,7 +81,7 @@ export default {
     return {
       today: {},
       // 已建成的页面放进 built,未建的点击提示“即将上线”
-      built: ['/agent'],
+      built: ['/agent', '/agent/commission', '/agent/profit', '/agent/downline', '/agent/add-member', '/agent/recharge', '/agent/rebate-set', '/agent/logs'],
       menus: [
         { label: '佣金', icon: 'gold-coin-o', color: '#f5a623', path: '/agent/commission' },
         { label: '盈亏', icon: 'bar-chart-o', color: '#e64340', path: '/agent/profit' },
