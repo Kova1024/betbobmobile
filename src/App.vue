@@ -276,11 +276,6 @@ export default {
         }
       });
     },
-    // 获取代理
-    getAgentLoginUrl() {
-      let that = this;
-      that.$parent.goNav(`/gamePage?dailiD=1`);
-    },
     openKefu() {
       let that = this;
       that.goNav(`/kefu`);
