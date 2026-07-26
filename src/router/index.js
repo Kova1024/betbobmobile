@@ -57,6 +57,19 @@ import agentTeamLogs from '@/components/agent/TeamLogs'
 
 Vue.use(Router)
 
+// vue-router 3.1+ 对“跳转到当前所在页”会 reject(NavigationDuplicated 等),
+// 项目里不少 push/replace 未加 catch,会变成 Uncaught (in promise)。此处全局吞掉良性导航异常。
+const rawPush = Router.prototype.push
+Router.prototype.push = function push(location, onResolve, onReject) {
+  if (onResolve || onReject) return rawPush.call(this, location, onResolve, onReject)
+  return rawPush.call(this, location).catch(err => err)
+}
+const rawReplace = Router.prototype.replace
+Router.prototype.replace = function replace(location, onResolve, onReject) {
+  if (onResolve || onReject) return rawReplace.call(this, location, onResolve, onReject)
+  return rawReplace.call(this, location).catch(err => err)
+}
+
 export default new Router({
   // mode: 'history',
 
