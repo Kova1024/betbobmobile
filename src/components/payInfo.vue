@@ -133,7 +133,7 @@ export default {
         }
         if (res.code == 200) {
           that.payInfo = res.data;
-          that.type = res.message;
+          that.type = (res.data && res.data.channel) || res.message;
           that.countTime();
         }
         this.$parent.hideLoading();

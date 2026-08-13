@@ -360,7 +360,7 @@ export default {
             }
             that.bankBox = {};
             that.amount = null;
-            that.$router.push({ path: `/payInfo?deposit_no=${res.message}` });
+            that.$router.push({ path: `/payInfo?deposit_no=${(res.data && res.data.out_trade_no) || res.message}` });
           }
           that.hideLoading();
         })
