@@ -34,7 +34,7 @@ export default {
     getInfo(id) {
       let that = this;
       that.$parent.showLoading();
-      that.$apiFun.post('/api/activitydeatil', { id }).then(res => {
+      that.$apiFun.post('/api/activitydetail', { id }).then(res => {
         console.log(res);
         if (res.code !== 200) {
           that.$parent.showTost(0, res.message);
@@ -48,9 +48,9 @@ export default {
     doactivityapply() {
       let that = this;
       that.$parent.showLoading();
-      that.$apiFun.post('/api/doactivityapply', { activityid: that.dataInfo.id }).then(res => {
+      that.$apiFun.post('/api/doactivity', { activityid: that.dataInfo.id }).then(res => {
         that.$parent.hideLoading();
-        that.$parent.showTost(1, res.message);
+        that.$parent.showTost(res.code === 200 ? 1 : 0, res.code === 200 ? '申请成功' : res.message);
       });
     },
   },

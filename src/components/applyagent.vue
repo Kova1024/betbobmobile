@@ -65,7 +65,7 @@ export default {
       that.$apiFun
         .post('/api/applyagentdo', info)
         .then(res => {
-          that.$parent.showTost(1, res.message);
+          that.$parent.showTost(res.code == 200 ? 1 : 0, res.code == 200 ? '申请成功，请等待审核' : res.message);
           that.$parent.hideLoading();
         })
         .catch(res => {

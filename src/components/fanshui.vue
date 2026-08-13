@@ -120,10 +120,12 @@ export default {
       that.$apiFun
         .post('/api/dofanshui', {})
         .then(res => {
-          console.log(res);
+          that.$parent.hideLoading();
           that.$parent.getUserInfo();
-          that.$parent.showTost(1, res.message);
-          that.getfanshui();
+          that.$parent.showTost(res.code == 200 ? 1 : 0, res.code == 200 ? '领取成功' : res.message);
+          that.page = 1;
+          that.pageData = {};
+          that.getData();
         })
         .catch(res => {
           that.$parent.hideLoading();
@@ -174,7 +176,7 @@ export default {
         date: that.date,
         page: that.page,
         api_type: that.api_type,
-        type: '',
+        type: 0,
       };
       that.$apiFun
         .post('/api/getfanshui', info)
@@ -183,14 +185,19 @@ export default {
             that.$parent.showTost(0, res.message);
           }
           if (res.code == 200) {
-            that.pageData = res.data.list;
+            // 新后端:data.list 为分页对象 {list,total,page,size,pages}(兼容旧 data/last_page)
+            let pageData = res.data.list || {};
+            let rows = pageData.data || pageData.list || [];
+            pageData.data = rows;
+            pageData.last_page = pageData.last_page || pageData.pages;
+            that.pageData = pageData;
             that.jisuan = res.data.jisuan;
             that.nojisuan = res.data.nojisuan;
             if (that.page == 1) {
-              that.list = res.data.list.data;
+              that.list = rows;
             } else {
               let list = JSON.parse(JSON.stringify(that.list));
-              res.data.list.data.forEach(el => {
+              rows.forEach(el => {
                 list.push(el);
               });
               that.list = list;

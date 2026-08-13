@@ -209,7 +209,9 @@ export default {
       that.$apiFun
         .post('/api/transall', {})
         .then(res => {
-          that.$parent.showTost(0, res.message);
+          // 新后端:一键回收结果文案在 data.message('回收成功'/'没有可回收的金额')
+          let msg = (res.data && res.data.message) || res.message;
+          that.$parent.showTost(res.code == 200 ? 1 : 0, msg);
           that.$parent.getUserInfoShowLoding();
           that.$parent.hideLoading();
         })

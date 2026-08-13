@@ -6,7 +6,7 @@
     <van-tabs v-model="gamecode" @change="handleClick" class="gameBox">
       <van-tab title="OB电子" name="obgdy">
         <div class="gameList">
-          <div class="gameLis" v-for="(item, index) in obgdyList" :key="index" @click="$parent.openGamePage(item.catecode, item.gamecode, '')">
+          <div class="gameLis" v-for="(item, index) in obgdyList" :key="index" @click="$parent.openGamePage(item.catecode, item.gametype, item.gamecode)">
             <img :src="item.gamepic" alt="" />
             <p>{{ item.gamename }}</p>
           </div>
@@ -14,7 +14,7 @@
       </van-tab>
       <van-tab title="FG电子" name="fgdz">
         <div class="gameList">
-          <div class="gameLis" v-for="(item, index) in fgdzList" :key="index" @click="$parent.openGamePage(item.catecode, item.gamecode, '')">
+          <div class="gameLis" v-for="(item, index) in fgdzList" :key="index" @click="$parent.openGamePage(item.catecode, item.gametype, item.gamecode)">
             <img :src="item.gamepic" alt="" />
             <p>{{ item.gamename }}</p>
           </div>
@@ -22,7 +22,7 @@
       >
       <van-tab title="PP电子" name="pp">
         <div class="gameList">
-          <div class="gameLis" v-for="(item, index) in ppList" :key="index" @click="$parent.openGamePage(item.catecode, item.gamecode, '')">
+          <div class="gameLis" v-for="(item, index) in ppList" :key="index" @click="$parent.openGamePage(item.catecode, item.gametype, item.gamecode)">
             <img :src="item.gamepic" alt="" />
             <p>{{ item.gamename }}</p>
           </div>
@@ -30,7 +30,7 @@
       >
       <van-tab title="AE电子" name="ae">
         <div class="gameList">
-          <div class="gameLis" v-for="(item, index) in aeList" :key="index" @click="$parent.openGamePage(item.catecode, item.gamecode, '')">
+          <div class="gameLis" v-for="(item, index) in aeList" :key="index" @click="$parent.openGamePage(item.catecode, item.gametype, item.gamecode)">
             <img :src="item.gamepic" alt="" />
             <p>{{ item.gamename }}</p>
           </div>

@@ -127,30 +127,30 @@
         </div>
       </div>
       <div class="rigts" v-if="gameType == 0">
-        <img class="" v-for="(item, index) in $store.state.realbetList" :key="index" @click="$parent.openGamePage(item.platform_name, item.game_code, '')" :src="`/static/image/realbet/${item.platform_name}.png`" alt="" />
+        <img class="" v-for="(item, index) in $store.state.realbetList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/realbet/${item.platform_name}.png`" alt="" />
       </div>
       <div class="rigts" v-if="gameType == 1">
-        <img class="" v-for="(item, index) in $store.state.sportList" :key="index" @click="$parent.openGamePage(item.platform_name, item.game_code, '')" :src="`/static/image/sport/${item.platform_name}.png`" alt="" />
+        <img class="" v-for="(item, index) in $store.state.sportList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/sport/${item.platform_name}.png`" alt="" />
       </div>
       <div class="rigts" v-if="gameType == 2">
-        <img class="" v-for="(item, index) in $store.state.gamingList" :key="index" @click="$parent.openGamePage(item.platform_name, item.game_code, '')" :src="`/static/image/gaming/${item.platform_name}.png`" alt="" />
+        <img class="" v-for="(item, index) in $store.state.gamingList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/gaming/${item.platform_name}.png`" alt="" />
       </div>
       <div class="rigts" v-if="gameType == 3">
-        <img class="" v-for="(item, index) in $store.state.jokerList" :key="index" @click="$parent.openGamePage(item.platform_name, item.game_code, '')" :src="`/static/image/joker/${item.platform_name}.png`" alt="" />
+        <img class="" v-for="(item, index) in $store.state.jokerList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/joker/${item.platform_name}.png`" alt="" />
       </div>
       <div class="rigts" v-if="gameType == 4">
         <img class="" @click="$parent.goNav('/concise?type=obgdy')" src="/static/image/concise/obgdy.png" alt="" />
         <img class="" @click="$parent.goNav('/concise?type=fgdz')" src="/static/image/concise/fgdz.png" alt="" />
         <img class="" @click="$parent.goNav('/concise?type=pp')" src="/static/image/concise/pp.png" alt="" />
         <img class="" @click="$parent.goNav('/concise?type=ae')" src="/static/image/concise/ae.png" alt="" />
-        <img class="" v-for="(item, index) in $store.state.conciseList" :key="index" @click="$parent.openGamePage(item.platform_name, item.game_code, '')" :src="`/static/image/concise/${item.platform_name}.png`" alt="" />
+        <img class="" v-for="(item, index) in $store.state.conciseList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/concise/${item.platform_name}.png`" alt="" />
       </div>
       <div class="rigts" v-if="gameType == 5">
         <img
           class=""
           v-for="(item, index) in $store.state.lotteryList"
           :key="index"
-          @click="$parent.openGamePage(item.platform_name, item.game_code, '')"
+          @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)"
           :style="item.platform_name == 'vrbet' ? 'width:100%' : ''"
           :src="`/static/image/lottery/${item.platform_name == 'ig' ? item.game_code : item.platform_name}.png`"
           alt=""

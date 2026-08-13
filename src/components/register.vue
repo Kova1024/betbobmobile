@@ -62,7 +62,7 @@ export default {
     },
     getUserInfo() {
       let that = this;
-      that.$apiFun.post('/api/user', {}).then(res => {
+      that.$apiFun.get('/api/me', {}).then(res => {
         console.log(res);
         if (res.code !== 200) {
           that.$parent.showTost(0, res.message);

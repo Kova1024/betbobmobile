@@ -101,11 +101,13 @@ const http = {
     if (url == '/api/register' || url == '/api/login_pc') {
       sessionStorage.setItem("baseURL", baseURL)
     }
+    // multipart 上传(如 /api/uploadimg)必须让浏览器自带 boundary,不能强制 JSON 头
+    let isFormData = (typeof FormData !== 'undefined') && (params instanceof FormData);
     return new Promise((resolve) => {
       _axios({
         url,
         data: params,
-        headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+        headers: isFormData ? {} : { 'Content-Type': 'application/json;charset=UTF-8' },
         method: 'POST'
       }).then(res => {
         resolve(adaptSuccess(res.data))

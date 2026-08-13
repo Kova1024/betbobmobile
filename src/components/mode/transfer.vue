@@ -137,7 +137,7 @@ export default {
 
       that.showLoading();
       that.$apiFun.post('/api/transfer', info).then(res => {
-        that.showTost(1, res.message);
+        that.showTost(res.code === 200 ? 1 : 0, res.code === 200 ? '转账成功' : res.message);
 
         if (res.code === 200) {
           that.refreshusermoney();
@@ -269,7 +269,9 @@ export default {
       that.$apiFun
         .post('/api/transall', {})
         .then(res => {
-          that.showTost(1, res.message);
+          // 新后端:一键回收结果文案在 data.message('回收成功'/'没有可回收的金额')
+          let msg = (res.data && res.data.message) || res.message;
+          that.showTost(res.code == 200 ? 1 : 0, msg);
           that.getbalancelist();
           that.refreshusermoney();
           that.hideLoading();

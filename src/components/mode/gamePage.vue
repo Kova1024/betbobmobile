@@ -67,8 +67,13 @@ export default {
     goGamePage(name, type, code) {
       let that = this;
 
+      // 新后端 game_type 用 NG 数字编号:1视讯/2老虎机/3彩票/4体育/5电竞/6捕鱼/7棋牌;
+      // 列表接口给的是字符串分类码(realbet/concise/...),这里统一映射
+      const NG_GAME_TYPE = { realbet: 1, concise: 2, lottery: 3, sport: 4, gaming: 5, fishing: 6, joker: 7 };
+      let gameType = NG_GAME_TYPE[type] || Number(type) || 0;
+
       that.$apiFun
-        .post('/api/getGameUrl', { plat_name: name, game_type: type || 0, game_code: code, is_mobile_url: 1 })
+        .post('/api/getGameUrl', { plat_name: name, game_type: gameType, game_code: code || '', is_mobile_url: 1 })
         .then(res => {
           console.log(res);
           if (res.code != 200) {

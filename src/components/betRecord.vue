@@ -19,7 +19,7 @@
             <div style="font-size: 0.3rem">{{ item.Code }}</div>
             <div style="font-size: 0.3rem">{{ statuType[item.status] }}</div>
           </div>
-          <div style="font-size: 0.3rem">{{ item.created_at }}</div>
+          <div style="font-size: 0.3rem">{{ item.bet_time }}</div>
         </van-cell>
       </van-list>
       <div v-else style="margin-top: 60px; text-align: center">
@@ -60,7 +60,8 @@ export default {
       list: [],
       pageData: {},
       page: 1,
-      statuType: ['无效注单', '已结算', '未结算'],
+      // 新后端 status 为 NG 编号:0未完成/1已完成/2已取消/3已撤单
+      statuType: ['未结算', '已结算', '已取消', '已撤单'],
       dogameLis: [],
       api_type: '',
       loading: false,

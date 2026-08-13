@@ -37,6 +37,7 @@ export default {
 
     that.getApp();
     that.getGameList();
+    that.getPlatList();
 
     if (sessionStorage.getItem('token')) {
       that.openDaoTime();
@@ -66,44 +67,71 @@ export default {
     getGameList() {
       let that = this;
 
-      that.$apiFun.get('/api/game/list', { category_id: '' }).then(res => {
+      that.$apiFun.get('/api/game/list', {}).then(res => {
         if (res.code == 200) {
           let list = Array.isArray(res.data) ? res.data : [];
-          let realbetList = [];
-          let jokerList = [];
-          let gamingList = [];
-          let sportList = [];
-          let lotteryList = [];
-          let conciseList = [];
+          // category_id 为 NG 数字游戏类型(字符串"1"-"7":1视讯/2老虎机/3彩票/4体育/5电竞/6捕鱼/7棋牌),
+          // 同时兼容旧字符串分类码(realbet/joker/...)。
+          // 彩票(3)/体育(4)/电竞(5)无子游戏行,由 getPlatList 从 /api/all/plat 取平台大厅,这里不写
+          let cateBucket = {
+            1: 'realbetList', realbet: 'realbetList',
+            2: 'conciseList', concise: 'conciseList',
+            7: 'jokerList', joker: 'jokerList',
+          };
+          let buckets = { realbetList: [], jokerList: [], conciseList: [] };
+          // game_lists 现为子游戏粒度(5000+行),首页磁贴是平台粒度:按(分类,平台)去重,
+          // game_code 置空表示点击进平台大厅;子游戏列表由 concise 页按需拉取
+          let seen = {};
           list.forEach(el => {
-            if (el.category_id == 'realbet' && el.app_state == 1) {
-              realbetList.push(el);
+            let name = cateBucket[el.category_id];
+            if (!name || el.app_state != 1) {
+              return;
             }
-            if (el.category_id == 'joker' && el.app_state == 1) {
-              jokerList.push(el);
+            let key = name + ':' + el.platform_name;
+            if (seen[key]) {
+              return;
             }
-            if (el.category_id == 'gaming' && el.app_state == 1) {
-              gamingList.push(el);
-            }
-            if (el.category_id == 'sport' && el.app_state == 1) {
-              sportList.push(el);
-            }
-            if (el.category_id == 'lottery' && el.app_state == 1) {
-              lotteryList.push(el);
-            }
-            if (el.category_id == 'concise' && el.app_state == 1) {
-              conciseList.push(el);
-            }
+            seen[key] = 1;
+            buckets[name].push({ platform_name: el.platform_name, category_id: el.category_id, game_code: '' });
           });
 
-          localStorage.setItem('realbetList', JSON.stringify(realbetList));
-          localStorage.setItem('jokerList', JSON.stringify(jokerList));
-          localStorage.setItem('gamingList', JSON.stringify(gamingList));
-          localStorage.setItem('sportList', JSON.stringify(sportList));
-          localStorage.setItem('lotteryList', JSON.stringify(lotteryList));
-          localStorage.setItem('conciseList', JSON.stringify(conciseList));
+          for (let name in buckets) {
+            localStorage.setItem(name, JSON.stringify(buckets[name]));
+          }
           that.$store.commit('changGameList');
         }
+      });
+    },
+    // 彩票/体育/电竞为平台大厅粒度,数据源为启用平台列表 /api/all/plat
+    // (方案A:依赖后端补齐 apis.game_type,NG 编号 3彩票/4体育/5电竞;未补齐前对应分区为空)
+    getPlatList() {
+      let that = this;
+      that.$apiFun.get('/api/all/plat', {}).then(res => {
+        if (res.code != 200) {
+          return;
+        }
+        let rows = Array.isArray(res.data) ? res.data : [];
+        let buckets = { lotteryList: '3', sportList: '4', gamingList: '5' };
+        for (let name in buckets) {
+          let digit = buckets[name];
+          let list = rows
+            .filter(el => {
+              if (el.app_state != 1) {
+                return false;
+              }
+              // game_type 兼容整型/字符串/逗号多值
+              let gt = el.game_type == null ? '' : String(el.game_type);
+              return gt.split(',').indexOf(digit) >= 0;
+            })
+            .map(el => ({
+              platform_name: (el.plat_type || el.api_code || '').toLowerCase(),
+              name: el.api_name,
+              category_id: digit,
+              game_code: '',
+            }));
+          localStorage.setItem(name, JSON.stringify(list));
+        }
+        that.$store.commit('changGameList');
       });
     },
     // 获取app
@@ -245,12 +273,12 @@ export default {
     // 不刷新页面跟新用户信息
     getUserInfo() {
       let that = this;
-      that.$apiFun.post('/api/user', {}).then(res => {
+      that.$apiFun.get('/api/me', {}).then(res => {
         if (res.code === 200) {
           let userInfo = res.data;
           let str = userInfo.current_vip || '';
           let index = str.indexOf('P');
-          let vip = index >= 0 ? str.substr(index + 1) : ''; //04
+          let vip = index >= 0 ? str.substr(index + 1) : userInfo.vip || 0; //04
           userInfo.vip = vip;
           localStorage.setItem('userInfo', JSON.stringify(userInfo));
           that.userInfo = userInfo;
@@ -262,12 +290,12 @@ export default {
     getUserInfoShowLoding() {
       let that = this;
       that.showLoading();
-      that.$apiFun.post('/api/user', {}).then(res => {
+      that.$apiFun.get('/api/me', {}).then(res => {
         if (res.code === 200) {
           let userInfo = res.data;
           let str = userInfo.current_vip || '';
           let index = str.indexOf('P');
-          let vip = index >= 0 ? str.substr(index + 1) : ''; //04
+          let vip = index >= 0 ? str.substr(index + 1) : userInfo.vip || 0; //04
           userInfo.vip = vip;
           localStorage.setItem('userInfo', JSON.stringify(userInfo));
           that.userInfo = userInfo;
