@@ -532,7 +532,10 @@ export default {
   justify-content: space-between;
   .lfst {
     width: 36px;
-    height: 400px;
+    // 原为固定 400px(只装得下6个分类),加捕鱼后改自适应
+    height: auto;
+    min-height: 400px;
+    align-self: flex-start;
     background: #eff3ff;
     border-radius: 20px;
     border: 1px solid #fff;
