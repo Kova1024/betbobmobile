@@ -125,36 +125,21 @@
 
           <span>彩票</span>
         </div>
+        <!-- 捕鱼暂无专属图标,先复用电子的;素材到位后替换 sidebar_fish_icon_* -->
+        <div :class="gameType == 6 ? 'ls active' : 'ls'" @click="changGameType(6)">
+          <img :src="`/static/style/${gameType == 6 ? 'sidebar_slot_icon_select' : 'sidebar_slot_icon_nor'}.png`" alt="" />
+
+          <span>捕鱼</span>
+        </div>
       </div>
-      <div class="rigts" v-if="gameType == 0">
-        <img class="" v-for="(item, index) in $store.state.realbetList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/realbet/${item.platform_name}.png`" alt="" />
-      </div>
-      <div class="rigts" v-if="gameType == 1">
-        <img class="" v-for="(item, index) in $store.state.sportList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/sport/${item.platform_name}.png`" alt="" />
-      </div>
-      <div class="rigts" v-if="gameType == 2">
-        <img class="" v-for="(item, index) in $store.state.gamingList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/gaming/${item.platform_name}.png`" alt="" />
-      </div>
-      <div class="rigts" v-if="gameType == 3">
-        <img class="" v-for="(item, index) in $store.state.jokerList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/joker/${item.platform_name}.png`" alt="" />
-      </div>
-      <div class="rigts" v-if="gameType == 4">
-        <img class="" @click="$parent.goNav('/concise?type=obgdy')" src="/static/image/concise/obgdy.png" alt="" />
-        <img class="" @click="$parent.goNav('/concise?type=fgdz')" src="/static/image/concise/fgdz.png" alt="" />
-        <img class="" @click="$parent.goNav('/concise?type=pp')" src="/static/image/concise/pp.png" alt="" />
-        <img class="" @click="$parent.goNav('/concise?type=ae')" src="/static/image/concise/ae.png" alt="" />
-        <img class="" v-for="(item, index) in $store.state.conciseList" :key="index" @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)" :src="`/static/image/concise/${item.platform_name}.png`" alt="" />
-      </div>
-      <div class="rigts" v-if="gameType == 5">
-        <img
-          class=""
-          v-for="(item, index) in $store.state.lotteryList"
-          :key="index"
-          @click="$parent.openGamePage(item.platform_name, item.category_id, item.game_code)"
-          :style="item.platform_name == 'vrbet' ? 'width:100%' : ''"
-          :src="`/static/image/lottery/${item.platform_name == 'ig' ? item.game_code : item.platform_name}.png`"
-          alt=""
-        />
+      <!-- 平台卡片区(两层结构第一层):有图标用 app_icon,无图标(兜底数据)用文字卡片 -->
+      <div class="rigts">
+        <template v-for="(item, index) in currentList">
+          <img v-if="item.app_icon" class="" :key="'p' + index" @click="openPlat(item)" :src="item.app_icon" alt="" />
+          <div v-else :key="'p' + index" class="platTile" @click="openPlat(item)">
+            {{ item.name || item.platform_name.toUpperCase() }}
+          </div>
+        </template>
       </div>
     </div>
 
@@ -216,12 +201,31 @@ export default {
       goInfo: null,
     };
   },
+  computed: {
+    // 侧边栏 tab → NG 分类编号:0真人(1) 1体育(4) 2电竞(5) 3棋牌(7) 4电子(2) 5彩票(3) 6捕鱼(6)
+    currentCate() {
+      return ['1', '4', '5', '7', '2', '3', '6'][this.gameType] || '1';
+    },
+    currentList() {
+      let map = { 1: 'realbetList', 2: 'conciseList', 3: 'lotteryList', 4: 'sportList', 5: 'gamingList', 6: 'fishingList', 7: 'jokerList' };
+      return this.$store.state[map[this.currentCate]] || [];
+    },
+  },
   created() {
     let that = this;
     that.getBanList();
     that.homenotice(); //获取公告
   },
   methods: {
+    // 两层结构分流:彩票/体育/电竞无子游戏直进大厅;真人/电子/棋牌/捕鱼进平台游戏列表页
+    openPlat(item) {
+      let that = this;
+      if (item.category_id == '3' || item.category_id == '4' || item.category_id == '5') {
+        that.$parent.openGamePage(item.platform_name, item.category_id, item.game_code);
+        return;
+      }
+      that.$parent.goNav(`/gameList?platform=${item.platform_name}&category=${item.category_id}&title=${encodeURIComponent(item.name || item.platform_name.toUpperCase())}`);
+    },
     openGogao(val) {
       this.goInfo = val;
     },
@@ -564,6 +568,27 @@ export default {
       width: 48%;
       border-radius: 10px;
       margin-top: 10px;
+    }
+    // 无图标素材平台的文字磁贴(与 img 磁贴同网格)
+    .platTile {
+      width: 48%;
+      height: 60px;
+      border-radius: 10px;
+      margin-top: 10px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #fdf6f1, #f3e3d7);
+      color: #cf866b;
+      font-size: 16px;
+      font-weight: 700;
+      span {
+        font-size: 12px;
+        font-weight: 400;
+        margin-left: 4px;
+        color: #b09b8c;
+      }
     }
   }
 }

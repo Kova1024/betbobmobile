@@ -36,8 +36,7 @@ export default {
     var query = that.$route.query;
 
     that.getApp();
-    that.getGameList();
-    that.getPlatList();
+    that.loadGameData();
 
     if (sessionStorage.getItem('token')) {
       that.openDaoTime();
@@ -63,73 +62,66 @@ export default {
         })
         .catch(() => {});
     },
-    // 获取游戏列表
-    getGameList() {
+    // 首页游戏数据(两层结构,第一层=平台卡片):
+    // - 七个分类(NG编号1-7)的平台卡片主数据源为 /api/all/plat(带 api_name/app_icon 全URL)
+    // - 有子游戏的分类(1视讯/2老虎机/6捕鱼/7棋牌)若 apis 未配平台,回退用 /api/game/list 按(分类,平台)去重兜底
+    // 点卡片的分流在 index.vue openPlat:3彩票/4体育/5电竞直进大厅,其余进 /gameList 选游戏
+    loadGameData() {
       let that = this;
+      let CATE_KEYS = { 1: 'realbetList', 2: 'conciseList', 3: 'lotteryList', 4: 'sportList', 5: 'gamingList', 6: 'fishingList', 7: 'jokerList' };
+      Promise.all([that.$apiFun.get('/api/all/plat', {}), that.$apiFun.get('/api/game/list', {})]).then(results => {
+        let platRes = results[0];
+        let gameRes = results[1];
+        let buckets = {};
+        for (let d in CATE_KEYS) {
+          buckets[CATE_KEYS[d]] = [];
+        }
 
-      that.$apiFun.get('/api/game/list', {}).then(res => {
-        if (res.code == 200) {
-          let list = Array.isArray(res.data) ? res.data : [];
-          // category_id 为 NG 数字游戏类型(字符串"1"-"7":1视讯/2老虎机/3彩票/4体育/5电竞/6捕鱼/7棋牌),
-          // 同时兼容旧字符串分类码(realbet/joker/...)。
-          // 彩票(3)/体育(4)/电竞(5)无子游戏行,由 getPlatList 从 /api/all/plat 取平台大厅,这里不写
-          let cateBucket = {
-            1: 'realbetList', realbet: 'realbetList',
-            2: 'conciseList', concise: 'conciseList',
-            7: 'jokerList', joker: 'jokerList',
-          };
-          let buckets = { realbetList: [], jokerList: [], conciseList: [] };
-          // game_lists 现为子游戏粒度(5000+行),首页磁贴是平台粒度:按(分类,平台)去重,
-          // game_code 置空表示点击进平台大厅;子游戏列表由 concise 页按需拉取
-          let seen = {};
-          list.forEach(el => {
-            let name = cateBucket[el.category_id];
-            if (!name || el.app_state != 1) {
-              return;
-            }
-            let key = name + ':' + el.platform_name;
-            if (seen[key]) {
-              return;
-            }
-            seen[key] = 1;
-            buckets[name].push({ platform_name: el.platform_name, category_id: el.category_id, game_code: '' });
-          });
-
-          for (let name in buckets) {
-            localStorage.setItem(name, JSON.stringify(buckets[name]));
+        // 平台列表(服务端已按 state=1 过滤;plat_type 为空 = NG 不支持该平台,进不了游戏,不展示)
+        let plats = platRes.code == 200 && Array.isArray(platRes.data) ? platRes.data : [];
+        plats.forEach(el => {
+          if (!el.plat_type) {
+            return;
           }
-          that.$store.commit('changGameList');
-        }
-      });
-    },
-    // 彩票/体育/电竞为平台大厅粒度,数据源为启用平台列表 /api/all/plat
-    // (方案A:依赖后端补齐 apis.game_type,NG 编号 3彩票/4体育/5电竞;未补齐前对应分区为空)
-    getPlatList() {
-      let that = this;
-      that.$apiFun.get('/api/all/plat', {}).then(res => {
-        if (res.code != 200) {
-          return;
-        }
-        let rows = Array.isArray(res.data) ? res.data : [];
-        let buckets = { lotteryList: '3', sportList: '4', gamingList: '5' };
-        for (let name in buckets) {
-          let digit = buckets[name];
-          let list = rows
-            .filter(el => {
-              if (el.app_state != 1) {
-                return false;
-              }
-              // game_type 兼容整型/字符串/逗号多值
-              let gt = el.game_type == null ? '' : String(el.game_type);
-              return gt.split(',').indexOf(digit) >= 0;
-            })
-            .map(el => ({
-              platform_name: (el.plat_type || el.api_code || '').toLowerCase(),
+          // game_type 兼容整型/字符串/逗号多值
+          String(el.game_type == null ? '' : el.game_type).split(',').forEach(digit => {
+            let key = CATE_KEYS[digit];
+            if (!key) {
+              return;
+            }
+            buckets[key].push({
+              platform_name: String(el.plat_type).toLowerCase(),
               name: el.api_name,
+              app_icon: el.app_icon || '',
               category_id: digit,
               game_code: '',
-            }));
-          localStorage.setItem(name, JSON.stringify(list));
+              order_by: el.order_by == null ? 999 : el.order_by,
+            });
+          });
+        });
+        for (let d in CATE_KEYS) {
+          buckets[CATE_KEYS[d]].sort((a, b) => a.order_by - b.order_by);
+        }
+
+        // 兜底:apis 里还没配平台的子游戏分类,从 game_lists 去重出平台(无图标,前端渲染文字卡片)
+        let games = gameRes.code == 200 && Array.isArray(gameRes.data) ? gameRes.data : [];
+        ['1', '2', '6', '7'].forEach(digit => {
+          let key = CATE_KEYS[digit];
+          if (buckets[key].length > 0) {
+            return;
+          }
+          let seen = {};
+          games.forEach(el => {
+            if (el.category_id != digit || el.app_state != 1 || seen[el.platform_name]) {
+              return;
+            }
+            seen[el.platform_name] = 1;
+            buckets[key].push({ platform_name: el.platform_name, name: '', app_icon: '', category_id: digit, game_code: '' });
+          });
+        });
+
+        for (let d in CATE_KEYS) {
+          localStorage.setItem(CATE_KEYS[d], JSON.stringify(buckets[CATE_KEYS[d]]));
         }
         that.$store.commit('changGameList');
       });

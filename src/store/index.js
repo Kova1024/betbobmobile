@@ -22,6 +22,7 @@ export default new Vuex.Store({
     sportList: [],
     lotteryList: [],
     conciseList: [],
+    fishingList: [],
   },
   //getter为state的计算属性
   getters: {
@@ -44,6 +45,8 @@ export default new Vuex.Store({
       state.lotteryList = lotteryList;
       let conciseList = localStorage.getItem('conciseList') ? JSON.parse(localStorage.getItem('conciseList')) : [];
       state.conciseList = conciseList;
+      let fishingList = localStorage.getItem('fishingList') ? JSON.parse(localStorage.getItem('fishingList')) : [];
+      state.fishingList = fishingList;
 
     },
     changUserInfo(state) {

@@ -38,7 +38,7 @@ import recharge from '@/components/recharge'
 import payInfo from '@/components/payInfo'
 import withdrawal from '@/components/withdrawal'
 import transfer from '@/components/transfer'
-import concise from '@/components/mode/concise'
+import gameList from '@/components/mode/gameList'
 
 
 
@@ -295,13 +295,10 @@ export default new Router({
 
 
     }, {
-      path: '/concise',
-      name: 'concise',
-      component: concise,
-      meta: {
-        keepAlive: true,//是否缓存组件
-        useCatch: false//是否用缓存
-      }
+      // 两层结构第二层:平台子游戏列表页(替代旧 concise 页)
+      path: '/gameList',
+      name: 'gameList',
+      component: gameList,
 
     },
 
