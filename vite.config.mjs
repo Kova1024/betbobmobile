@@ -62,6 +62,8 @@ export default defineConfig(({ mode }) => {
         // dev 下代理过去,让本地也能看到全套图。生产同域部署时此代理无关紧要。
         // 注意:只代理 /static/image;/static/style、/static/js 后端没有,保持走本地。
         '/static/image': { target: BACKEND, changeOrigin: true, secure: false },
+        // 新后端上传类资源(轮播/头像等)走 /uploads,代理到后端
+        '/uploads': { target: BACKEND, changeOrigin: true, secure: false },
       },
     },
 

@@ -25,7 +25,7 @@
       </div>
       <van-swipe @change="onChange">
         <van-swipe-item v-for="(item, index) in bannerList" :key="index">
-          <img :src="item.pic" @error="$event.target.style.display = 'none'" style="width: 100%; display: block" alt="" />
+          <img :src="item.src" @error="$event.target.style.display = 'none'" style="width: 100%; display: block" alt="" />
         </van-swipe-item>
         <template #indicator>
           <div class="swiper-dots">
