@@ -43,8 +43,8 @@ export default {
     closeDaoTime() {
       this.$parent.closeDaoTime();
     },
-    openGamePage(name, type, code) {
-      this.$parent.openGamePage(name, type, code);
+    openGamePage(name, type, code, api) {
+      this.$parent.openGamePage(name, type, code, api);
     },
 
     goNav(url) {

@@ -2,9 +2,9 @@
   <div style="width: 100%; min-height: 100vh; background: rgb(237, 241, 255)">
     <van-nav-bar style="position: fixed; top: 0; left: 0; width: 100%; background-color: #ede9e7" :title="title" left-arrow @click-left="$router.back()" />
     <div style="height: 46px"></div>
-    <!-- 两层结构第二层:平台子游戏列表(game/list?platform&category),点游戏进 getGameUrl -->
+    <!-- 两层结构第二层:平台子游戏列表(game/list?platform&category),点游戏 gamelogin(api_code+game_code) -->
     <div class="gameGrid" v-if="list.length > 0">
-      <div class="gameCard" v-for="(item, index) in list" :key="index" @click="$parent.openGamePage(platform, category, item.game_code)">
+      <div class="gameCard" v-for="(item, index) in list" :key="index" @click="$parent.openGamePage(platform, category, item.game_code, api)">
         <img v-if="item.game_icon" :src="item.game_icon" alt="" />
         <div v-else class="noIcon">{{ item.name }}</div>
         <p>{{ item.name }}</p>
@@ -20,13 +20,14 @@
 export default {
   name: 'gameList',
   data() {
-    return { list: [], platform: '', category: '', title: '' };
+    return { list: [], platform: '', category: '', api: '', title: '' };
   },
   created() {
     let that = this;
     let query = that.$route.query;
     that.platform = query.platform || '';
     that.category = query.category || '';
+    that.api = query.api || '';
     that.title = query.title || (query.platform || '').toUpperCase();
     that.getList();
   },

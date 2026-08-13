@@ -217,14 +217,17 @@ export default {
     that.homenotice(); //获取公告
   },
   methods: {
-    // 两层结构分流:彩票/体育/电竞无子游戏直进大厅;真人/电子/棋牌/捕鱼进平台游戏列表页
+    // 两层结构分流(按后端实测的 has_games,不按类型猜):
+    // has_games=true → 平台游戏列表页选游戏;false → 大厅型,直接 gamelogin 进厅(不带 game_code)
     openPlat(item) {
       let that = this;
-      if (item.category_id == '3' || item.category_id == '4' || item.category_id == '5') {
-        that.$parent.openGamePage(item.platform_name, item.category_id, item.game_code);
+      if (!item.has_games) {
+        that.$parent.openGamePage(item.platform_name, item.category_id, '', item.api_code);
         return;
       }
-      that.$parent.goNav(`/gameList?platform=${item.platform_name}&category=${item.category_id}&title=${encodeURIComponent(item.name || item.platform_name.toUpperCase())}`);
+      that.$parent.goNav(
+        `/gameList?platform=${item.platform_name}&category=${item.category_id}&api=${item.api_code || ''}&title=${encodeURIComponent(item.name || item.platform_name.toUpperCase())}`
+      );
     },
     openGogao(val) {
       this.goInfo = val;

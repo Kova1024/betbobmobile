@@ -62,65 +62,42 @@ export default {
         })
         .catch(() => {});
     },
-    // 首页游戏数据(两层结构,第一层=平台卡片):
-    // - 七个分类(NG编号1-7)的平台卡片主数据源为 /api/all/plat(带 api_name/app_icon 全URL)
-    // - 有子游戏的分类(1视讯/2老虎机/6捕鱼/7棋牌)若 apis 未配平台,回退用 /api/game/list 按(分类,平台)去重兜底
-    // 点卡片的分流在 index.vue openPlat:3彩票/4体育/5电竞直进大厅,其余进 /gameList 选游戏
+    // 首页平台卡片,唯一数据源 /api/all/plat(后端每日实测探活,只返回可进的平台):
+    // 每条含 api_code/api_name/game_type(NG编号1-7)/plat_type/app_icon/has_games/game_count。
+    // 点卡片按 has_games 分流(index.vue openPlat):true→/gameList 选游戏;false→大厅型直接 gamelogin
     loadGameData() {
       let that = this;
       let CATE_KEYS = { 1: 'realbetList', 2: 'conciseList', 3: 'lotteryList', 4: 'sportList', 5: 'gamingList', 6: 'fishingList', 7: 'jokerList' };
-      Promise.all([that.$apiFun.get('/api/all/plat', {}), that.$apiFun.get('/api/game/list', {})]).then(results => {
-        let platRes = results[0];
-        let gameRes = results[1];
+      that.$apiFun.get('/api/all/plat', {}).then(res => {
+        if (res.code != 200) {
+          return;
+        }
         let buckets = {};
         for (let d in CATE_KEYS) {
           buckets[CATE_KEYS[d]] = [];
         }
-
-        // 平台列表(服务端已按 state=1 过滤;plat_type 为空 = NG 不支持该平台,进不了游戏,不展示)
-        let plats = platRes.code == 200 && Array.isArray(platRes.data) ? platRes.data : [];
+        let plats = Array.isArray(res.data) ? res.data : [];
         plats.forEach(el => {
           if (!el.plat_type) {
             return;
           }
-          // game_type 兼容整型/字符串/逗号多值
-          String(el.game_type == null ? '' : el.game_type).split(',').forEach(digit => {
-            let key = CATE_KEYS[digit];
-            if (!key) {
-              return;
-            }
-            buckets[key].push({
-              platform_name: String(el.plat_type).toLowerCase(),
-              name: el.api_name,
-              app_icon: el.app_icon || '',
-              category_id: digit,
-              game_code: '',
-              order_by: el.order_by == null ? 999 : el.order_by,
-            });
+          let key = CATE_KEYS[String(el.game_type == null ? '' : el.game_type)];
+          if (!key) {
+            return;
+          }
+          buckets[key].push({
+            platform_name: String(el.plat_type).toLowerCase(),
+            api_code: el.api_code || '',
+            name: el.api_name,
+            app_icon: el.app_icon || '',
+            category_id: String(el.game_type),
+            has_games: !!el.has_games,
+            game_count: el.game_count || 0,
+            order_by: el.order_by == null ? 999 : el.order_by,
           });
         });
         for (let d in CATE_KEYS) {
           buckets[CATE_KEYS[d]].sort((a, b) => a.order_by - b.order_by);
-        }
-
-        // 兜底:apis 里还没配平台的子游戏分类,从 game_lists 去重出平台(无图标,前端渲染文字卡片)
-        let games = gameRes.code == 200 && Array.isArray(gameRes.data) ? gameRes.data : [];
-        ['1', '2', '6', '7'].forEach(digit => {
-          let key = CATE_KEYS[digit];
-          if (buckets[key].length > 0) {
-            return;
-          }
-          let seen = {};
-          games.forEach(el => {
-            if (el.category_id != digit || el.app_state != 1 || seen[el.platform_name]) {
-              return;
-            }
-            seen[el.platform_name] = 1;
-            buckets[key].push({ platform_name: el.platform_name, name: '', app_icon: '', category_id: digit, game_code: '' });
-          });
-        });
-
-        for (let d in CATE_KEYS) {
           localStorage.setItem(CATE_KEYS[d], JSON.stringify(buckets[CATE_KEYS[d]]));
         }
         that.$store.commit('changGameList');
@@ -173,8 +150,8 @@ export default {
         })
         .catch(() => {});
     },
-    // 打开游戏
-    openGamePage(name, type, code) {
+    // 打开游戏(api=apis 表大写业务码,gamelogin 用;code 为空=大厅型进厅)
+    openGamePage(name, type, code, api) {
       let that = this;
       let token = sessionStorage.getItem('token') ? sessionStorage.getItem('token') : '';
       if (!token) {
@@ -182,7 +159,7 @@ export default {
 
         return;
       }
-      that.goNav(`/gamePage?name=${name}&type=${type}&code=${code}`);
+      that.goNav(`/gamePage?name=${name}&type=${type}&code=${code || ''}&api=${api || ''}`);
     },
     doCopy(msg) {
       let cInput = document.createElement('input');
