@@ -1,6 +1,6 @@
 <template>
   <div v-if="bannerList.length > 0" class="home-safe-top">
-    <div id="redPacket" v-if="$store.state.appInfo.redpacket_switch == 1 && hongbashow">
+    <div id="redPacket" v-if="$store.state.appInfo.redpacket_switch == 1 && hongbashow && redpacketOk">
       <i @click="$parent.goNav('/hongbao')" class="grab"></i>
       <img @click="changhongbashow" src="/static/image/hongbaocolse.png" />
     </div>
@@ -199,6 +199,7 @@ export default {
       tanshow: true,
       appshow: true,
       goInfo: null,
+      redpacketOk: true,
     };
   },
   computed: {
@@ -215,8 +216,23 @@ export default {
     let that = this;
     that.getBanList();
     that.homenotice(); //获取公告
+    that.checkRedpacket();
   },
   methods: {
+    // 没有可用红包活动(条数为0或已结束)时隐藏红包入口;
+    // 未登录查不了 userredpacket(需鉴权),维持只按站点开关显示
+    checkRedpacket() {
+      let that = this;
+      if (!that.$store.state.token) {
+        return;
+      }
+      that.$apiFun.get('/api/userredpacket', {}).then(res => {
+        if (res.code == 200 && res.data) {
+          let rules = Array.isArray(res.data.rules) ? res.data.rules : [];
+          that.redpacketOk = rules.length > 0 && res.data.redPacketStatus != 'END';
+        }
+      });
+    },
     // 两层结构分流(按后端实测的 has_games,不按类型猜):
     // has_games=true → 平台游戏列表页选游戏;false → 大厅型,直接 gamelogin 进厅(不带 game_code)
     openPlat(item) {
