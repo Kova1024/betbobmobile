@@ -65,25 +65,53 @@ Go(Gin) + PostgreSQL 后端接口文档。用户端 API + 代理自助后台 + �
 | POST | `/api/transall` | 用户 | 一键回收 → `{message}`('回收成功'/'没有可回收的金额') |
 | POST | `/api/getrechargerecord` | 用户 | 充值记录。body 可带 `time:[start,end],page,size`；每条附 `type`(充值/充值赠送) |
 | POST | `/api/getwithdrawrecord` | 用户 | 提现记录。body 可带 `time:[start,end],page,size`；每条附 `out_trade_no(=order_no),type='提现'` |
-| POST | `/api/gettransrecord` | 用户 | 交易记录。body: `type(1充值/2提现/3转入游戏/4回收),date(1/2/3/4),api_type?,page,size`；每条附 `pay_way(中文),amount(绝对值)`，created_at 为 `Y-m-d H:i:s` |
+| POST | `/api/gettransrecord` | 用户 | 交易记录。body: `type(1充值/2提现/3转入游戏/4回收),date(1/2/3/4),api_type?,page,size`；每条附 `pay_way(中文),amount(绝对值)`，created_at 为 `Y-m-d H:i:s`。type=4 页签除游戏回收外还含"余额调整"(人工加减款)与"活动彩金" |
+
+> **余额台账口径**：任何改 `users.balance` 的操作都有单据可查——充值/提现在 `recharge`/`withdraws` 单，
+> 其余统一进 `transfer_logs`，`transfer_type` 取值：`0`转入游戏 `1`转出游戏(回收) `2`后台人工加减款(money 带符号)
+> `3`活动彩金 `4`代理给下线充值(代理侧支出，money 为负) `5`红包 `6`会员返水 `20`代理返佣。
+> 常量定义见 `internal/service/ledger.go`。数据库层另有 `balance >= 0` CHECK 约束兜底(0008)，余额不可能为负。
 | POST | `/api/userapimoney/:api_code` | 用户 | 刷新并返回某平台额度 |
 | ANY | `/api/credit` | - | 平台商户额度。`api_code` → **data 为金额标量** |
 
 ## 3. 游戏
 
+> **两层结构（先选平台，再选游戏）——别把 `plat` 和 `list` 搞混：**
+>
+> - **`/api/all/plat` = 平台清单（"厅/品牌"）**：AG、PG、BBIN…。每条是一个**平台**，含 `api_code/api_name/game_type/app_icon/has_games/game_count`。
+>   只返回**实测可进**的平台(每日探测任务写 `platform_probes`，见 §2.9)；进不去的(未开通/货币不匹配/死数据)自动隐藏。
+> - **`/api/game/list` = 游戏清单（"具体游戏"）**：夜戏貂蝉、大丰收…。每条是一款**游戏**，含 `game_code/name/game_icon`。
+>   同样只含可用平台的游戏(如 PT 暂不可用时，其 765 款自动隐藏，恢复后自动回来)。
+>
+> **前端流程——按 `has_games` 分两条路，不要再按 game_type 猜**：
+> ```
+> /api/all/plat  →  列平台图标  →  用户点某平台
+>       ├─ has_games=true  → /api/game/list?platform=<plat_type> → 列游戏 → 点游戏
+>       │        └─ /api/gamelogin (api_code + game_code)  →  进该游戏
+>       └─ has_games=false → 直接 /api/gamelogin (api_code，不传 game_code) → 进大厅
+> ```
+> `has_games` 由后端按库存实时计算(游戏数见 `game_count`)，比“彩票/体育/电竞无子游戏”的旧经验可靠：
+> 实测同一平台不同类型行为就不同(MG 视讯有大厅、MG 老虎机必须带 game_code)，且 PNG/TTG 等老虎机平台也无子游戏清单。
+>
+> **类型页签用 `game_types`(数组)而非 `game_type`(单值)**：一个平台可跨多类(BBIN 五栖：视讯/老虎机/彩票/捕鱼/棋牌)，
+> `game_type` 只是主类型。`game_types` 来自每日实测(能进该类型大厅或该类型下有上架游戏)——
+> 捕鱼没有独立平台(它是 AG/JDB 等平台内的子分类)，靠这个数组捕鱼页签才有平台卡片。
+> 点进多类型平台后，`/api/game/list?platform=X&category=Y` 按类型过滤该平台的游戏。
+>
+> 类比：外卖先选"店"(plat)；`has_games=true` 的店看"菜单"(list)点菜，`false` 的店进门自选。
+
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
-| POST | `/api/gamelist` | - | APP 游戏列表。body: `platform_name?,game_type?`(兼容旧 `category_id`)；条目 `{gamecode,gamename,name,gametype,category_id,platform_name,app_state,gamepic(全URL)}` |
-| GET | `/api/game/list` | - | 站点游戏列表。query: `platform?,category?`；条目含 `check_yes_img/check_no_img/api_logo_img/mobile_img/header_logo`(全URL) |
-| GET | `/api/all/plat` | - | 启用平台列表 |
-| POST | `/api/gamelistBycode` | - | 捕鱼游戏列表(固定 category=fishing，不读参数)。条目 `{gamepic(全URL),catecode,gamename,gamecode,gametype:'fishing'}` |
+| POST | `/api/gamelist` | - | **APP** 游戏列表(读 `game_lists`，`app_state=1`)。body: `platform_name?(platType),game_type?(NG编号)`；条目 `{gamecode,gamename,name,gametype,category_id,platform_name,app_state,gamepic(全URL缩略图)}` |
+| GET | `/api/game/list` | - | **网站** 游戏列表(读 `game_lists`，`site_state=1`)。query: `platform?(platType),category?(NG编号)`；条目含 `game_icon(全URL缩略图)` 等 |
+| GET | `/api/all/plat` | - | 平台列表(仅实测可用的)。每个含 `api_code,api_name,game_type(主类型),plat_type,app_icon(全URL),order_by,state`、**`game_types`(实测可玩的全部类型数组，如 AG=["1","2","6"]——前端按它把平台放进多个类型页签，捕鱼页签=game_types 含"6"的平台)**、**`has_games`**(true→拉 /game/list 渲染游戏列表；false→大厅型，直接 gamelogin 不传 game_code) 和 `game_count`(上架游戏数) |
+| POST | `/api/gamelistBycode` | - | 捕鱼游戏列表(固定 `category_id=6`)。条目 `{gamepic(全URL),catecode,gamename,gamecode,gametype:'6'}` |
 | POST | `/api/getdogame` | - | 平台 code→name 映射(剔除 universal，对齐原实现) |
 | POST | `/api/gamelogin` | 用户 | 进游戏。body: `api_code,game_type,is_mobile,game_code` → `{url}`。`game_type` 用 NG 编号(见下)，`is_mobile`:0电脑/1手机 |
 | POST | `/api/getGameUrl` | 用户 | 进游戏（App 字段名 `plat_name/game_type/game_code/is_mobile_url`）。`game_type` 用 NG 编号(见下) |
 
 > **game_type 编号(NG 聚合器口径，全系统统一)**：`1`视讯 `2`老虎机 `3`彩票 `4`体育 `5`电竞 `6`捕鱼 `7`棋牌。
 > `api_code` 为大写业务码(AG/OBZR)，服务端经 `apis.plat_type` 映射为 NG platType。
-> (注：`/gamelist` 等列表接口的 `game_type` 参数是字符串分类码 realbet/fishing/concise…，与此数字编号是两回事。)
 | POST | `/api/refreshusermoney` | 用户 | 刷新各平台余额 → UserProfile 字段集 + `list`(各平台余额) |
 | POST | `/api/app/getMoney` | 用户 | 网站余额 + 游戏总余额 |
 | POST | `/api/betrecord` | 用户 | 投注记录。body: `date,api_type,page,size`；每条 `{bet_id,bet_time(Y-m-d H:i:s),platform_type,bet_amount,win_loss,status,Code(平台中文名)}` |
@@ -108,10 +136,16 @@ Go(Gin) + PostgreSQL 后端接口文档。用户端 API + 代理自助后台 + �
 | POST | `/api/doactivity` | 用户 | 申请活动。body: `activityid` |
 | POST | `/api/activityapplylog` | 用户 | 活动申请记录(含 `user_id,updated_at,activity_name`) |
 | POST | `/api/uservip` | - | VIP 等级列表 |
-| GET | `/api/userredpacket` | 用户 | 红包状态/可领次数 |
-| POST | `/api/douserredpacket` | 用户 | 抢红包（按今日充值×比例随机）|
+| GET | `/api/userredpacket` | 用户 | 红包状态/可领次数。`redPacketStatus`：READY=存在启用且在活动期内的规则(**与个人资格无关**，入口常亮) / END=无进行中活动。`sendnums` 为当前档可领次数−今日已领(不够档为 0) |
+| POST | `/api/douserredpacket` | 用户 | 抢红包（按今日充值×比例随机，金额 1 元 ~ 今日充值×money%）。资格在此校验：充值不够档→203"累计充值不满足活动条件"；次数用完→203；无进行中活动→"暂无红包可抢" |
 | POST | `/api/getredpacket` | 用户 | 领取已生成红包。body: `id`（>0 指定，≤0 全部）|
 | ANY | `/api/redpacket` | 用户 | 红包领取记录(GET/POST)。body 可带 `time:[start,end]`；每条附 `amount(=redpacketmoney)` |
+
+> **红包规则表 `red_envelopes` 字段语义**(后台列名有误导，以此为准)：`day_flow`=今日充值下限、
+> `flow_money`=今日充值上限、`recharge`=**每日可领次数**、`money`=**红包比例%**(随机 1 元~充值×money%)、
+> `start_time`/`end_time` 活动期、`status` 0禁用/1启用。多档同时命中取次数最大档。
+> 今日充值口径：当天 state=2 的充值，**排除** pay_way=10 充值赠送、**包含** pay_way=11 代理充值。
+> 后台增删改：`/admin/red-envelopes` 通用 CRUD(`PUT /:id` 可改任意字段含日期)。
 | POST | `/api/applyagentdo` | 用户 | 申请成为代理。body: `apply_info,mobile` |
 | POST | `/api/suggestion` | 用户 | 意见反馈。body: `type,content,img?` |
 | POST | `/api/suggestionlist` | 用户 | 反馈记录 |
@@ -181,27 +215,90 @@ Go(Gin) + PostgreSQL 后端接口文档。用户端 API + 代理自助后台 + �
 | GET | `/admin/report/agent-commission` | user.manage | 代理佣金报表（各代理下线树投注/盈利/佣金汇总）|
 | GET | `/admin/report/bet-sum` | user.manage | 下注汇总（会员按平台投注分布）|
 | GET | `/admin/report/fanshui-log` | user.manage | 返水记录明细。`?username&start&end` |
-| GET | `/admin/recharges` | recharge.audit | 充值单列表。`?state&page&size` |
+| GET | `/admin/recharges` | recharge.audit | 充值单列表。`?state&pay_way&user_id&keyword(单号/会员名)&start&end&page&size` |
 | POST | `/admin/recharges/:id/pass` | recharge.audit | 充值审核通过 |
 | POST | `/admin/recharges/:id/refuse` | recharge.audit | 充值审核拒绝 |
-| GET | `/admin/withdraws` | withdraw.audit | 提现单列表 |
+| GET | `/admin/withdraws` | withdraw.audit | 提现单列表。`?state&type&user_id&keyword(单号/会员名)&start&end&page&size` |
 | POST | `/admin/withdraws/:id/pass` | withdraw.audit | 提现审核通过 |
 | POST | `/admin/withdraws/:id/refuse` | withdraw.audit | 提现审核拒绝（退款）|
-| GET | `/admin/users` · `/users/:id` | user.manage | 会员列表/详情 |
+| GET | `/admin/users` · `/users/:id` | user.manage | 会员列表/详情。`?keyword(用户名/手机/真名)&status&isblack&isagent&vip&page&size` |
+| PUT | `/admin/users/:id` | user.manage | 改会员资料（白名单）。body 任填：`realname,phone,mail,vip,isagent,allowagent,transferstatus,mbalance,fanshuifee,status`。**改不了密码/余额**（走下方专门端点）|
 | POST | `/admin/users/:id/balance` | user.manage | 加减款。body: `delta,memo` |
 | POST | `/admin/users/:id/black` | user.manage | 拉黑/解黑。body: `black` |
-| GET | `/admin/agent-applies` | agent.audit | 代理申请列表 |
+| POST | `/admin/users/:id/reset-password` | user.manage | 重置密码。body: `password(≥6)`，`pay:true` 重置支付密码，否则登录密码 |
+| POST | `/admin/activity-applies/:id/audit` | content.manage | 活动申请审批。body: `pass(bool),bonus?(通过时加彩金入账)`；仅待审核(1)有效，重复审 409 |
+| GET | `/admin/agent-applies` | agent.audit | 代理申请列表。`?state&keyword&page&size` |
 | POST | `/admin/agent-applies/:id/audit` | agent.audit | 审核。body: `pass` |
 | POST | `/admin/agents/:id/settle` | agent.audit | 单代理立即返佣 → `{settled}` |
-| GET/POST | `/admin/admins` · `/roles` · `/permissions` | rbac.manage | 管理员/角色/权限管理 |
+| GET/POST | `/admin/admins` | rbac.manage | 管理员 列表/新建。新建 body: `username,password(≥6),name,role_ids[]` |
+| PUT | `/admin/admins/:id` | rbac.manage | 改管理员。body 任填：`name,status(0禁/1启),password(重置),role_ids[](整组重设角色)` |
+| DELETE | `/admin/admins/:id` | rbac.manage | 删管理员（超管 id=1 禁止删）|
+| GET/POST | `/admin/roles` | rbac.manage | 角色 列表/新建。新建 body: `name,slug,perm_ids[]` |
+| PUT | `/admin/roles/:id` | rbac.manage | 改角色。body 任填：`name,perm_ids[](整组重设权限)` |
+| DELETE | `/admin/roles/:id` | rbac.manage | 删角色（连带清权限/管理员绑定）|
+| GET/POST | `/admin/permissions` | rbac.manage | 权限点 列表/新建。新建 body: `name,slug` |
 
 > 权限 slug：`recharge.audit` `withdraw.audit` `user.manage` `agent.audit` `rbac.manage`；超级管理员持通配 `*`。
 
 ## 10. 后台内容/配置管理 CRUD `/admin/*`（权限 `content.manage`）
 
-通用 REST（泛型生成，24 个实体）：`GET /admin/<entity>?page&size&state&status`（列表）、`GET /admin/<entity>/:id`、`POST /admin/<entity>`（新建，**含必填字段校验**，缺失/空 → 422）、`PUT /admin/<entity>/:id`（改，部分字段）、`DELETE /admin/<entity>/:id`（删）。
+通用 REST（泛型生成）：`GET /admin/<entity>`（列表）、`GET /admin/<entity>/:id`、`POST /admin/<entity>`（新建，**含必填字段校验**，缺失/空 → 400）、`PUT /admin/<entity>/:id`（改，部分字段）、`DELETE /admin/<entity>/:id`（删）。
 
-**可增删改**：`game-lists` `game-lists-app` `apis` `activities` `activity-types` `banners` `red-envelopes` `messages` `templates` `banks` `pay-settings` `code-pays` `user-vips` `user-cards` `agent-settlements` `articles` `article-cates`
+**列表筛选（query 参数，可组合）**：
+- 通用：`page`、`size`、`state`、`status`
+- `keyword`：对该实体的可搜索列做 `ILIKE` 模糊匹配（不区分大小写）
+- 各实体额外的精确过滤列（`?列=值`），列名见下表：
+
+| 实体 | 精确过滤列 | keyword 搜索列 |
+|---|---|---|
+| `game-lists` | `platform_name` `category_id` `site_state` `app_state` `is_pc` `is_mobile` `is_hot` `is_new` `is_recommend` | `name` `name_en` `game_code` |
+| `apis` | `game_type` `plat_type` `state` `app_state` | `api_code` `api_name` |
+| `platform-probes`(只读) | `api_code` `plat_type` `game_type` `available` `lobby_ok` | `api_code` `plat_type` |
+| `activities` | `type` `state` `app_state` | `title` `content` |
+| `banners` | `type` `state` | `title` |
+| `messages` | `type` `isagent` `vip_id` | `title` `content` |
+| `banks` | `state` | `bank_name` `code` |
+| `pay-settings` | `bank_id` `state` | `bank_no` `bank_owner` |
+| `user-vips` | `status` | `vipname` |
+| `user-cards` | `user_id` `bank` | `bank_no` `bank_owner` |
+| `game-records`(只读) | `user_id` `platform_type` `game_type` `status` | `username` `bet_id` |
+| `transfer-logs`(只读) | `user_id` `transfer_type` `state` `platform_type` | `order_no` |
+| `activity-applies`(只读) | `activity_id` `user_id` `state` | — |
+| `userredpackets`(只读) | `uid` `status` `redpacketid` | — |
+
+> `game_type`/`category_id` 为 NG 数字编号（1视讯 2老虎机 3彩票 4体育 5电竞 6捕鱼 7棋牌）；`platform_name`/`plat_type` 为 NG platType（小写）。
+
+**游戏上下架/标记（三个层级，均 `content.manage`）**：
+- **单个游戏**：`PUT /admin/game-lists/:id` body `{site_state:0/1}`（或 app_state/is_hot…）
+- **批量游戏**：`POST /admin/game-lists/toggle` body `{field, value, platform_name?, category_id?, ids?}` → `{affected}`
+  - `field` 白名单：`site_state`(网站)/`app_state`(APP)/`is_hot`/`is_new`/`is_recommend`；`value`:0/1
+  - 过滤维度：`platform_name`(整平台)/`category_id`(整类型)/`ids`(指定游戏)，至少给一个
+- **整个平台（卡片 + 全部子游戏级联）**：`POST /admin/apis/:id/toggle` body `{value:0/1, scope("site"|"app"|"both")默认both, cascade默认true}` → `{platform, games_affected}`
+
+**平台能不能上架——先看 `GET /admin/platform-status`（`content.manage`）**：
+
+每个 apis 平台一行，回答"启用它前端会不会展示、玩家进不进得去"。
+**筛选**：`?playable=1/0`(能否上架)、`?state=1/0`(启用/停用)，可组合——
+`?playable=1&state=0` 就是"**能上架但还没上架**"的待办清单，`?playable=0&state=1` 是"已启用却进不去"的问题清单。字段：
+
+| 字段 | 说明 |
+|---|---|
+| `playable` | **运营只看这个**：true = 启用后前端必展示且玩家进得去(与 `/api/all/plat` 的过滤是同一套判定) |
+| `reason` | 人话说明：`可上架` / `可上架：无大厅，玩家必须从游戏列表点具体游戏进` / `平台不可用：NG 回 10407(未开通/代码无效/货币不匹配)` / `无可玩路径…` / `尚未探测…` |
+| `game_count` | 该平台上架游戏数(0 且 playable=true → 大厅型) |
+| `playable_types` | 哪些游戏类型(1-7)有可玩路径 |
+| `lobby_ok` | 是否有可直接进的大厅 |
+| `probed` / `checked_at` / `last_code` | 是否探测过、最后探测时间、最后 NG 返回码 |
+
+> 数据来源是 `platform_probes`（每日 `probe-platforms` 任务对 NG **实测**每个平台×7 种游戏类型能否进游戏后写入，
+> **覆盖含停用在内的全部平台**——运营问"能不能上架"问的往往正是停用中的平台；
+> 原始明细可查 `GET /admin/platform-probes`）。为什么必须实测：NG 对"未开通/代码无效/货币不匹配"统一回 10407，
+> 文档与费率表都区分不了；平台恢复/关停也只有实测能发现。探测用固定账号 p99999901，不影响真实会员。
+> 因此 `state=1`(启用) ≠ 会展示：前端最终展示 = 启用 ∩ playable。停用的可用平台想上架，直接把 state 开成 1 即可。
+  - `scope=site` 改 `apis.state` + 该平台游戏 `site_state`；`app` 改 `apis.app_state` + 游戏 `app_state`；`both` 全改
+  - `cascade=false` 则只改平台不动游戏
+
+**可增删改实体**：`game-lists` `apis` `activities` `activity-types` `banners` `red-envelopes` `messages` `templates` `banks` `pay-settings` `code-pays` `user-vips` `user-cards` `agent-settlements` `articles` `article-cates`
 **只读（仅列表/详情）**：`game-records` `transfer-logs` `syslogs` `user-operate-logs` `userredpackets` `activity-applies`
 **系统参数**：`GET /admin/system-configs`（全部）、`POST /admin/system-configs`（body `{key:value,...}` 批量 upsert）
 
@@ -210,7 +307,8 @@ Go(Gin) + PostgreSQL 后端接口文档。用户端 API + 代理自助后台 + �
 | 命令 | 说明 |
 |---|---|
 | `cron agent-settlement` | 全部代理返佣结算（发放 transfer_type=20 待结算流水）|
-| `cron crawl-records` | 从聚合器抓取投注记录（与 `/api/game/callback` 二选一）|
+| `cron crawl-records` | 从聚合器抓取投注记录，幂等触发返水（NG 拉取模式，无推送回调）|
+| `cron sync-games` | 从 NG 同步各平台子游戏到 `game_lists`（按 platType+game_code upsert，保留后台运营字段：上下架/热门/排序）|
 
 ## 支付回调补充（§8 之外）
 
@@ -408,7 +506,7 @@ null
 > 返水引擎按 `status==1`(已完成) 触发，与 `/api/game/callback` 同一套逻辑。
 
 ### TransferLogs（转账/返水/返佣流水）
-`id, order_no, api_type, user_id, transfer_type(0上分/1下分/5红包/6会员返水/20代理返佣), money, cash_fee, real_money, before_money, after_money, state, platform_type, betid, settlementsday, addtime, remark, created_at, updated_at`
+`id, order_no, api_type, user_id, transfer_type(0上分/1下分/2人工调整/3活动彩金/4代理充值支出/5红包/6会员返水/20代理返佣), money, cash_fee, real_money, before_money, after_money, state, platform_type, betid, settlementsday, addtime, remark, created_at, updated_at`
 
 ### UserCards（银行卡）
 `id, user_id, bank(银行名/USDT/ebpay), bank_no(卡号/地址), bank_address, bank_owner(持卡人/链类型), created_at, updated_at`
@@ -450,7 +548,6 @@ null
 - **`articles`**（Articles）: `id, name, enname, cateid, content, encontent, created_at, updated_at, stor`
 - **`article-cates`**（Articlescate）: `id, name, Created_at, Updated_at`
 - **`apis`**（Apis）: `id, api_code, api_name, api_money, game_type, plat_type, state, app_state, created_at, updated_at, order_by, app_icon`
-- **`game-lists-app`**（GameListsApp）: `id, platform_name, name, name_en, keywords, game_code, game_icon, game_title_img, category_id, order_by, is_hot, app_state, created_at, updated_at, app_img, app_icon`
 
 ---
 
@@ -500,7 +597,7 @@ null
 
 | 接口 | 请求 | 响应 data |
 |---|---|---|
-| GET /api/all/plat | - | `Apis[]` |
+| GET /api/all/plat | - | `Apis[]`(仅实测可用平台，含 `game_types`/`has_games`/`game_count`) |
 | POST /api/gamelist · GET /api/game/list | `{category_id?,is_hot?,app?}` | `游戏行[]` |
 | POST /api/gamelistBycode | `{platform_name}` | `GameLists[]` |
 | POST /api/getdogame | - | `{code:name,…}` |
@@ -535,7 +632,7 @@ null
 | POST /api/activitydetail | `id` | `Activities` |
 | POST /api/doactivity | `{activityid}` | `null` |
 | POST /api/activityapplylog | `page,limit` | 分页(`list:[{id,activity_id,state,activity_name,created_at}]`) |
-| GET /api/userredpacket | - | `{sendnums,acquirednum,redPacketStatus,rules,max_times}` |
+| GET /api/userredpacket | - | `{sendnums,acquirednum,redPacketStatus(READY=有进行中活动/END),rules,max_times}` |
 | POST /api/douserredpacket | - | `{redpacketmoney,sendnums,acquirednum}` |
 | POST /api/getredpacket | `{id}` | `null` |
 | POST /api/redpacket | `page,size` | 分页{list:Userredpacket[]} |
