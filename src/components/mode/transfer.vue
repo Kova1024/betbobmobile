@@ -128,7 +128,8 @@ export default {
         sourcetype = that.openInfo.platname;
         targettype = 'userbalance';
       }
-      let info = { amount: that.amount, sourcetype: sourcetype, targettype: targettype };
+      // 输入框 v-model 出来是字符串,后端 float 绑定必须传数字,否则报"缺少参数"
+      let info = { amount: Number(that.amount), sourcetype: sourcetype, targettype: targettype };
       if (that.amount == null) {
         that.showTost(0, '请输入操作金额！');
         return;

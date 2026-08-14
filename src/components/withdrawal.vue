@@ -356,7 +356,7 @@ export default {
       }
       that.$parent.showLoading();
       that.$apiFun
-        .post('/api/withdraw', { amount, bank, password })
+        .post('/api/withdraw', { amount: Number(amount), bank: Number(bank), password })
         .then(res => {
           if (res.code != 200) {
             that.$parent.showTost(0, res.message);
@@ -395,7 +395,7 @@ export default {
       }
       that.$parent.showLoading();
       that.$apiFun
-        .post('/api/withdraw', { amount, bank, password })
+        .post('/api/withdraw', { amount: Number(amount), bank: Number(bank), password })
         .then(res => {
           if (res.code != 200) {
             that.$parent.showTost(0, res.message);
