@@ -199,7 +199,8 @@ export default {
       tanshow: true,
       appshow: true,
       goInfo: null,
-      redpacketOk: true,
+      // 游客默认不显示红包(查不了活动,不盲目露出);登录后查 userredpacket 决定
+      redpacketOk: false,
     };
   },
   computed: {
