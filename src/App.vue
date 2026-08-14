@@ -81,19 +81,24 @@ export default {
           if (!el.plat_type) {
             return;
           }
-          let key = CATE_KEYS[String(el.game_type == null ? '' : el.game_type)];
-          if (!key) {
-            return;
-          }
-          buckets[key].push({
-            platform_name: String(el.plat_type).toLowerCase(),
-            api_code: el.api_code || '',
-            name: el.api_name,
-            app_icon: el.app_icon || '',
-            category_id: String(el.game_type),
-            has_games: !!el.has_games,
-            game_count: el.game_count || 0,
-            order_by: el.order_by == null ? 999 : el.order_by,
+          // game_types 为该平台实测可玩的全部类型数组(如 AG=["1","2","6"]),一个平台进多个页签;
+          // 捕鱼无独立平台,全靠它。老数据无此字段时回退单值 game_type(主类型)
+          let types = Array.isArray(el.game_types) && el.game_types.length > 0 ? el.game_types : [String(el.game_type)];
+          types.forEach(digit => {
+            let key = CATE_KEYS[String(digit)];
+            if (!key) {
+              return;
+            }
+            buckets[key].push({
+              platform_name: String(el.plat_type).toLowerCase(),
+              api_code: el.api_code || '',
+              name: el.api_name,
+              app_icon: el.app_icon || '',
+              category_id: String(digit),
+              has_games: !!el.has_games,
+              game_count: el.game_count || 0,
+              order_by: el.order_by == null ? 999 : el.order_by,
+            });
           });
         });
         for (let d in CATE_KEYS) {
