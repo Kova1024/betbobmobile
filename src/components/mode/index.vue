@@ -220,18 +220,33 @@ export default {
     that.checkRedpacket();
   },
   methods: {
-    // 没有可用红包活动(条数为0或已结束)时隐藏红包入口;
-    // 未登录查不了 userredpacket(需鉴权),维持只按站点开关显示
+    // 红包入口"常亮"规则(API.md):有进行中活动就显示,与个人抢红包资格无关。
+    // 判定优先用后端 redPacketStatus==READY;为容后端该字段暂把个人资格算进 END 的情况,
+    // 再按文档对 READY 的定义兜底自算:rules 里存在 status=1 且当前在活动期内的规则。
+    // 未登录查不了 userredpacket(需鉴权),默认不显示。
     checkRedpacket() {
       let that = this;
       if (!that.$store.state.token) {
         return;
       }
       that.$apiFun.get('/api/userredpacket', {}).then(res => {
-        if (res.code == 200 && res.data) {
-          let rules = Array.isArray(res.data.rules) ? res.data.rules : [];
-          that.redpacketOk = rules.length > 0 && res.data.redPacketStatus != 'END';
+        if (res.code != 200 || !res.data) {
+          return;
         }
+        if (res.data.redPacketStatus == 'READY') {
+          that.redpacketOk = true;
+          return;
+        }
+        let now = new Date().getTime();
+        let rules = Array.isArray(res.data.rules) ? res.data.rules : [];
+        that.redpacketOk = rules.some(r => {
+          if (r.status != 1) {
+            return false;
+          }
+          let start = r.start_time ? new Date(r.start_time).getTime() : 0;
+          let end = r.end_time ? new Date(r.end_time).getTime() : Infinity;
+          return now >= start && now <= end;
+        });
       });
     },
     // 两层结构分流(按后端实测的 has_games,不按类型猜):
