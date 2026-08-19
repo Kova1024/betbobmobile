@@ -95,6 +95,9 @@ export default {
               name: el.api_name,
               app_icon: el.app_icon || '',
               category_id: String(digit),
+              // 进入方式按"平台×类型"粒度取 type_modes(BG视讯是大厅、捕鱼棋牌是列表);
+              // 老后端无此字段时回退平台级 has_games
+              mode: (el.type_modes && el.type_modes[String(digit)]) || (el.has_games ? 'list' : 'lobby'),
               has_games: !!el.has_games,
               game_count: el.game_count || 0,
               order_by: el.order_by == null ? 999 : el.order_by,

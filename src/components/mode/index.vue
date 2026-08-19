@@ -249,11 +249,11 @@ export default {
         });
       });
     },
-    // 两层结构分流(按后端实测的 has_games,不按类型猜):
-    // has_games=true → 平台游戏列表页选游戏;false → 大厅型,直接 gamelogin 进厅(不带 game_code)
+    // 两层结构分流,粒度为"平台×类型"(item.mode 已按当前页签取自 type_modes):
+    // lobby → 直接 gamelogin 进该类型大厅(带页签 game_type,不带 game_code);list → 平台游戏列表页
     openPlat(item) {
       let that = this;
-      if (!item.has_games) {
+      if (item.mode !== 'list') {
         that.$parent.openGamePage(item.platform_name, item.category_id, '', item.api_code);
         return;
       }
